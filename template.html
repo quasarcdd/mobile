@@ -65,6 +65,8 @@ body{
   flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--accent);
   border-radius:10px;padding:6px 11px;font-size:14px;cursor:pointer;
 }
+.dtitle .back.home{color:var(--muted)}
+.dtitle .back[disabled]{color:var(--muted);opacity:.45;cursor:default}
 .dtitle .nm{flex:1;min-width:0;font-weight:500;font-size:15px;overflow-wrap:anywhere}
 .dtitle .kd{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
 .tabs{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--card);border-bottom:1px solid var(--line)}
@@ -134,7 +136,8 @@ pre{
 <div class="detail" id="detail" hidden>
   <div class="bar">
     <div class="dtitle">
-      <button class="back" id="back">返回</button>
+      <button class="back" id="back">回退</button>
+      <button class="back home" id="home">首页</button>
       <div>
         <div class="nm" id="dname"></div>
         <div class="kd" id="dkey"></div>
@@ -266,9 +269,10 @@ document.getElementById("list").addEventListener("click", function(ev){
 
 /* ---------- 详情 ---------- */
 var current = -1;
+/* 详情导航栈：记录打开过的条目序号与其译文滚动位置，供「回退」逐层返回 */
+var navStack = [];
 
-function openEntry(i){
-  if (i < 0 || i >= IDX.length) return;
+function renderEntry(i){
   current = i;
   var e = IDX[i];
   document.getElementById("dname").textContent = e[2];
@@ -298,6 +302,42 @@ function openEntry(i){
   paneT.scrollTop = 0;
 }
 
+/* 把当前条目的滚动位置存回它自己那一帧，避免离开时丢失阅读位置 */
+function saveScroll(){
+  var f = navStack[navStack.length - 1];
+  if (f) f.top = document.getElementById("paneT").scrollTop;
+}
+
+function openEntry(i){
+  if (i < 0 || i >= IDX.length) return;
+  saveScroll();
+  navStack.push({ i: i, top: 0 });
+  renderEntry(i);
+  syncNav();
+}
+
+/* 逐层回退到上一层条目；已在最外层时按钮为禁用态，要退出详情请用「首页」 */
+function backEntry(){
+  if (navStack.length <= 1) return;
+  saveScroll();
+  navStack.pop();
+  var prev = navStack[navStack.length - 1];
+  renderEntry(prev.i);
+  document.getElementById("paneT").scrollTop = prev.top;
+  syncNav();
+}
+
+/* 回到首页（检索列表），列表的搜索词、筛选与滚动位置保持不变 */
+function gotoHome(){
+  navStack = [];
+  document.getElementById("detail").hidden = true;
+  syncNav();
+}
+
+function syncNav(){
+  document.getElementById("back").disabled = navStack.length <= 1;
+}
+
 function pretty(s){
   try { return JSON.stringify(JSON.parse(s), null, 2); } catch(err) { return s; }
 }
@@ -312,9 +352,8 @@ function showTab(which){
 
 document.getElementById("tabT").addEventListener("click", function(){ showTab("t"); });
 document.getElementById("tabR").addEventListener("click", function(){ showTab("r"); });
-document.getElementById("back").addEventListener("click", function(){
-  document.getElementById("detail").hidden = true;
-});
+document.getElementById("back").addEventListener("click", backEntry);
+document.getElementById("home").addEventListener("click", gotoHome);
 
 document.getElementById("copy").addEventListener("click", function(){
   if (current < 0) return;
@@ -405,7 +444,7 @@ function makeLinks(link, host){
           }
           if (idx !== undefined) { openEntry(idx); }
           else {
-            document.getElementById("detail").hidden = true;
+            gotoHome();
             document.getElementById("q").value = k;
             query = k;
             doSearch();
