@@ -116,6 +116,72 @@ pre{
 }
 @keyframes sp{to{transform:rotate(360deg)}}
 .err{color:#d4537e;padding:24px;font-size:14px;text-align:center;max-width:520px}
+
+/* ---------- AI 抽屉 ---------- */
+.aiwrap{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;background:rgba(0,0,0,.4)}
+.ai{
+  width:100%;max-height:84%;background:var(--card);
+  border:1px solid var(--line);border-bottom:none;border-radius:16px 16px 0 0;
+  display:flex;flex-direction:column;overflow:hidden;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.aihd{flex:0 0 auto;padding:10px 12px 0;border-bottom:1px solid var(--line)}
+.aihd .r1{display:flex;gap:6px;align-items:center}
+.aihd .ttl{flex:1;min-width:0;font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--bg);color:var(--fg);
+  border-radius:8px;padding:5px 10px;font-size:13px;line-height:1.35;cursor:pointer;
+}
+.b:active{background:var(--chip)}
+.b.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.b[disabled]{opacity:.45}
+.aistat{font-size:12px;color:var(--muted);padding:5px 0 2px;overflow-wrap:anywhere;white-space:pre-line}
+.aitabs{display:flex;gap:6px;padding:8px 0}
+.aibody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 14px}
+.aifrag{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--bg)}
+.aifrag.done{border-color:var(--accent)}
+.aifrag .t{
+  font-size:12.5px;overflow-wrap:anywhere;word-break:break-all;
+  font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--fg);
+}
+.aifrag .res{font-size:13.5px;margin-top:6px;overflow-wrap:anywhere;color:var(--accent)}
+.ops{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.op{
+  border:1px solid var(--line);background:var(--card);color:var(--accent);
+  border-radius:8px;padding:4px 10px;font-size:12.5px;cursor:pointer;
+}
+.op.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.op[disabled]{opacity:.45}
+.aiempty{color:var(--muted);font-size:13px;padding:22px 6px;text-align:center;line-height:1.7}
+.aiform{
+  flex:0 0 auto;display:flex;gap:8px;padding:8px 12px 10px;
+  border-top:1px solid var(--line);background:var(--card);
+}
+.aiform input{
+  flex:1;min-width:0;font-size:15px;padding:9px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--fg);outline:none;
+}
+.aimsg{margin-bottom:10px;font-size:13.5px;line-height:1.65;overflow-wrap:anywhere}
+.aimsg .who{font-size:12.5px;font-weight:500;margin-bottom:2px}
+.aimsg.me .who{color:#4a86c8}
+.aimsg.ai .who{color:#3f9e6a}
+.aimsg .bd{white-space:pre-wrap}
+.aimsg .bd.wait{color:var(--muted)}
+.aiover{color:var(--accent);font-weight:500}
+.setwrap{position:absolute;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+.setbody{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px calc(34px + env(safe-area-inset-bottom,0px))}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+.field input,.field textarea{
+  width:100%;font-size:15px;padding:9px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--card);color:var(--fg);outline:none;font-family:inherit;
+}
+.field textarea{
+  min-height:78px;resize:vertical;font-size:12.5px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;
+}
+.hint{font-size:12px;color:var(--muted);line-height:1.7}
+.hint.warn{color:#d4537e}
 </style>
 </head>
 <body>
@@ -136,8 +202,8 @@ pre{
 <div class="detail" id="detail" hidden>
   <div class="bar">
     <div class="dtitle">
-      <button class="back" id="back">回退</button>
       <button class="back home" id="home">首页</button>
+      <button class="back" id="back">回退</button>
       <div>
         <div class="nm" id="dname"></div>
         <div class="kd" id="dkey"></div>
@@ -147,10 +213,81 @@ pre{
   <div class="tabs">
     <button class="tab on" id="tabT">译文</button>
     <button class="tab" id="tabR">原文</button>
-    <button class="tab sp" id="copy">复制</button>
+    <button class="tab sp" id="aiopen">AI</button>
+    <button class="tab" id="copy">复制</button>
   </div>
   <div class="pane" id="paneT"></div>
   <div class="pane" id="paneR" hidden></div>
+</div>
+
+<div class="aiwrap" id="aiwrap" hidden>
+  <div class="ai">
+    <div class="aihd">
+      <div class="r1">
+        <div class="ttl">AI 助手</div>
+        <button class="b" id="aibatch">全部翻译</button>
+        <button class="b" id="aiset">设置</button>
+        <button class="b" id="aiclose">关闭</button>
+      </div>
+      <div class="aistat" id="aistat"></div>
+      <div class="aitabs">
+        <button class="tab on" id="aitabF">片段</button>
+        <button class="tab" id="aitabQ">问答</button>
+      </div>
+    </div>
+    <div class="aibody" id="aifrag"></div>
+    <div class="aibody" id="aichat" hidden></div>
+    <div class="aiform" id="aiform" hidden>
+      <input id="aiq" type="text" placeholder="就当前条目提问…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="b pri" id="aisend">问</button>
+    </div>
+  </div>
+</div>
+
+<div class="setwrap" id="setwrap" hidden>
+  <div class="bar">
+    <div class="dtitle">
+      <button class="back" id="setback">返回</button>
+      <div><div class="nm">AI 设置</div></div>
+    </div>
+  </div>
+  <div class="setbody">
+    <div class="field">
+      <label>接口地址 base_url</label>
+      <input id="sBase" type="text" placeholder="https://api.deepseek.com/v1" autocapitalize="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>模型 model</label>
+      <input id="sModel" type="text" placeholder="deepseek-chat" autocapitalize="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>API Key</label>
+      <input id="sKey" type="password" placeholder="sk-…" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="hint warn">API Key 只保存在本页内存里，不会写入本地存储，也不会写进这个 HTML 文件。关闭或刷新页面后需要重新填写。</div>
+    </div>
+    <div class="field">
+      <label>温度 temperature</label>
+      <input id="sTemp" type="text" inputmode="decimal" placeholder="0.2">
+    </div>
+    <div class="field">
+      <label>单次最大输出 max_tokens</label>
+      <input id="sMax" type="text" inputmode="numeric" placeholder="512">
+    </div>
+    <div class="field">
+      <label>粘贴配置 JSON（可选）</label>
+      <textarea id="sJson" placeholder="把桌面版的 .bena_ai.json 内容整段粘进来，点「导入」自动填上面的字段"></textarea>
+      <div class="ops"><button class="op" id="sImport">导入</button></div>
+    </div>
+    <div class="field">
+      <button class="b pri" id="sSave" style="width:100%;padding:10px">保存</button>
+    </div>
+    <div class="hint">翻译结果缓存在本机浏览器里，不会修改任何词典文件，也不会上传。</div>
+    <div class="hint" id="sCacheInfo" style="margin-top:8px"></div>
+    <div class="ops" style="margin-top:14px">
+      <button class="op" id="sClear">清空 AI 翻译缓存</button>
+      <button class="op" id="sExp">导出缓存</button>
+    </div>
+  </div>
 </div>
 
 <div class="boot" id="boot"><div class="spin"></div><div id="bootmsg">正在准备数据…</div></div>
@@ -300,6 +437,7 @@ function renderEntry(i){
   showTab("t");
   document.getElementById("detail").hidden = false;
   paneT.scrollTop = 0;
+  if (!document.getElementById("aiwrap").hidden) openAIDrawer();
 }
 
 /* 把当前条目的滚动位置存回它自己那一帧，避免离开时丢失阅读位置 */
@@ -395,8 +533,8 @@ function flatten(node){
     if (!n || typeof n !== "object") return;
     if ("main" in n) {
       if (n.main === null || n.main === undefined) return;
-      out.push(new Array(depth + 1).join("    ") + n.main);
-      if (n.description) out.push(new Array(depth + 1).join("    ") + "（" + n.description + "）");
+      out.push(new Array(depth + 1).join("    ") + applyOverrides(n.main));
+      if (n.description) out.push(new Array(depth + 1).join("    ") + "（" + applyOverrides(n.description) + "）");
       if (n.children && n.true) out.push(new Array(depth + 1).join("    ") + "..." + n.true + "：");
       if (n.children) n.children.forEach(function(c){ walk(c, depth + 1); });
     }
@@ -463,7 +601,7 @@ function renderNode(node, host){
   if (!("main" in node)) return;
   if (node.main === null || node.main === undefined) return;
 
-  var text = String(node.main);
+  var text = applyOverrides(node.main);
   var hasKids = Array.isArray(node.children);
   if (!hasKids && node.true && node.true !== "") {
     text = text === "" ? node.true + "：" : text + "，" + node.true + "：";
@@ -481,7 +619,7 @@ function renderNode(node, host){
     if (node.description && node.description !== "") {
       var nt = document.createElement("div");
       nt.className = "note";
-      nt.textContent = "（" + node.description + "）";
+      nt.textContent = "（" + applyOverrides(node.description) + "）";
       d.appendChild(nt);
     }
     makeLinks(node.link, d);
@@ -503,7 +641,7 @@ function renderNode(node, host){
   if (node.description && node.description !== "") {
     var n2 = document.createElement("div");
     n2.className = "note";
-    n2.textContent = "（" + node.description + "）";
+    n2.textContent = "（" + applyOverrides(node.description) + "）";
     host.appendChild(n2);
   }
   if (hasKids) {
@@ -608,6 +746,535 @@ document.getElementById("list").addEventListener("scroll", function(){
   if (shown < results.length && el.scrollTop + el.clientHeight > el.scrollHeight - 240) {
     renderList(false);
   }
+});
+
+/* ---------- AI 抽屉 ---------- */
+
+/* 配置：API Key 只放内存，其余非敏感项持久化 */
+var AI = { base: "https://api.deepseek.com/v1", model: "deepseek-chat", key: "", temp: 0.2, max: 512 };
+var CFG_LS = "bena_ai_cfg";
+var OV_LS = "bena_ai_ov";
+var OV = Object.create(null);
+var DRAFT = Object.create(null);
+
+(function loadAICfg(){
+  try {
+    var s = JSON.parse(localStorage.getItem(CFG_LS) || "{}") || {};
+    if (typeof s.base === "string" && s.base) AI.base = s.base;
+    if (typeof s.model === "string" && s.model) AI.model = s.model;
+    if (typeof s.temp === "number") AI.temp = s.temp;
+    if (typeof s.max === "number") AI.max = s.max;
+  } catch (e) {}
+  try {
+    var o = JSON.parse(localStorage.getItem(OV_LS) || "{}");
+    if (o && typeof o === "object") OV = o;
+  } catch (e) { OV = Object.create(null); }
+})();
+
+function saveAICfg(){
+  try {
+    localStorage.setItem(CFG_LS, JSON.stringify({
+      base: AI.base, model: AI.model, temp: AI.temp, max: AI.max
+    }));
+  } catch (e) {}
+}
+function saveOV(){
+  try { localStorage.setItem(OV_LS, JSON.stringify(OV)); } catch (e) {}
+}
+
+/* 匹配 标识（未翻译） / 标识（翻译失败） / 标识（翻译失败：TypeError） */
+var FRAG = /([A-Za-z_][A-Za-z0-9_.]*)[（(](?:未翻译|翻译失败(?:[：:][^)）]*)?)[)）]/g;
+var FRAG_REPL = new RegExp(FRAG.source, "g");
+
+function hasMark(s){
+  return typeof s === "string" && (s.indexOf("未翻译") >= 0 || s.indexOf("翻译失败") >= 0);
+}
+
+function applyOverrides(s){
+  if (s === null || s === undefined) return s;
+  var t = String(s);
+  if (!hasMark(t)) return t;
+  return t.replace(FRAG_REPL, function(m, id){
+    var zh = OV[id];
+    return zh ? zh + "（" + id + "）" : m;
+  });
+}
+
+function collectFrags(root){
+  var out = [], seen = Object.create(null);
+  (function walk(n){
+    if (!n || typeof n !== "object" || !("main" in n)) return;
+    var vals = [n.main, n.description];
+    for (var k = 0; k < vals.length; k++){
+      var v = vals[k];
+      if (!hasMark(v)) continue;
+      FRAG.lastIndex = 0;
+      var mm;
+      while ((mm = FRAG.exec(v)) !== null){
+        var id = mm[1];
+        if (!seen[id]) { seen[id] = 1; out.push(id); }
+        if (FRAG.lastIndex === mm.index) FRAG.lastIndex++;
+      }
+    }
+    if (Array.isArray(n.children)) {
+      for (var i = 0; i < n.children.length; i++) walk(n.children[i]);
+    }
+  })(root);
+  return out;
+}
+
+/* ---------- 调用 ---------- */
+
+var SYS_TR = [
+  "你是《明日方舟》游戏机制术语翻译。",
+  "用户给出一个英文标识符（可能是 Node 名、Buff key 或字段名）。",
+  "只输出它对应的简体中文短译，2~8 个字。",
+  "不要解释、不要标点、不要引号、不要重复原文、不要换行。",
+  "若无法确定含义，就输出最贴近字面的直译。"
+].join("");
+
+function aiStream(messages, onDelta){
+  return new Promise(function(resolve, reject){
+    if (!AI.key) {
+      reject(new Error("还没有填写 API Key。点右上角「设置」填一下。"));
+      return;
+    }
+    var url = String(AI.base).replace(/\/+$/, "") + "/chat/completions";
+    var payload = {
+      model: AI.model,
+      messages: messages,
+      temperature: AI.temp,
+      max_tokens: AI.max,
+      stream: true
+    };
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + AI.key
+      },
+      body: JSON.stringify(payload)
+    }).then(function(resp){
+      if (!resp.ok) {
+        return resp.text().then(function(t){
+          reject(new Error("接口返回 HTTP " + resp.status + "：" + String(t).slice(0, 200)));
+        });
+      }
+      if (!resp.body || !resp.body.getReader) {
+        return resp.json().then(function(j){
+          var c = (((j || {}).choices || [])[0] || {}).message || {};
+          if (c.content) onDelta(c.content);
+          resolve();
+        });
+      }
+      var reader = resp.body.getReader();
+      var dec = new TextDecoder("utf-8");
+      var buf = "", done = false;
+      (function pump(){
+        reader.read().then(function(r){
+          if (done) return;
+          if (r.done) { done = true; resolve(); return; }
+          buf += dec.decode(r.value, { stream: true });
+          var lines = buf.split("\n");
+          buf = lines.pop();
+          for (var i = 0; i < lines.length; i++){
+            var s = lines[i].trim();
+            if (!s || s.indexOf("data:") !== 0) continue;
+            var p = s.slice(5).trim();
+            if (p === "[DONE]") { done = true; resolve(); return; }
+            var j;
+            try { j = JSON.parse(p); } catch (e) { continue; }
+            var d = (((j || {}).choices || [])[0] || {}).delta || {};
+            if (d.content) onDelta(d.content);
+          }
+          pump();
+        }, function(e){ if (!done) { done = true; reject(e); } });
+      })();
+    }).catch(reject);
+  });
+}
+
+function cleanReply(s){
+  var t = String(s || "").trim();
+  t = t.replace(/^["'“”‘’《》【】\s]+/, "").replace(/["'“”‘’《》【】\s]+$/, "");
+  t = t.replace(/[\r\n]+/g, " ").trim();
+  if (t.length > 40) t = t.slice(0, 40);
+  return t;
+}
+
+/* ---------- 抽屉 ---------- */
+
+var aiwrap = document.getElementById("aiwrap");
+var aifragBox = document.getElementById("aifrag");
+var aichatBox = document.getElementById("aichat");
+var aiform = document.getElementById("aiform");
+var aistat = document.getElementById("aistat");
+var aiqInput = document.getElementById("aiq");
+
+var frags = [];
+var aiBusy = false;
+var chatLog = [];
+
+function aiStatusText(){
+  return AI.key
+    ? "AI 服务：" + AI.model + "（Key 仅本次会话有效，不会保存）"
+    : "尚未配置：点「设置」填入接口地址、模型和 API Key";
+}
+
+function refreshAIStat(){
+  aistat.textContent = aiStatusText();
+  var n = frags.length, done = 0;
+  for (var i = 0; i < n; i++) if (OV[frags[i]]) done++;
+  if (n) aistat.textContent += "\n未翻译片段 " + n + " 个" + (done ? "，已处理 " + done + " 个" : "");
+}
+
+function openAIDrawer(){
+  if (current < 0) return;
+  frags = collectFrags(DATA[current][0]);
+  renderFragList();
+  refreshAIStat();
+  aiwrap.hidden = false;
+}
+
+function closeAIDrawer(){
+  aiwrap.hidden = true;
+}
+
+function switchAITab(which){
+  var isFrag = which === "f";
+  aifragBox.hidden = !isFrag;
+  aichatBox.hidden = isFrag;
+  aiform.hidden = isFrag;
+  document.getElementById("aitabF").classList.toggle("on", isFrag);
+  document.getElementById("aitabQ").classList.toggle("on", !isFrag);
+  if (!isFrag) renderChat();
+}
+
+function renderFragList(){
+  aifragBox.innerHTML = "";
+  if (!frags.length){
+    var d = document.createElement("div");
+    d.className = "aiempty";
+    d.textContent = "这个条目没有需要 AI 补译的片段。";
+    aifragBox.appendChild(d);
+    return;
+  }
+  for (var i = 0; i < frags.length; i++) aifragBox.appendChild(buildFragCard(frags[i]));
+}
+
+function buildFragCard(id){
+  var box = document.createElement("div");
+  box.className = "aifrag";
+  box.dataset.id = id;
+
+  var t = document.createElement("div");
+  t.className = "t";
+  t.textContent = id;
+  box.appendChild(t);
+
+  var res = document.createElement("div");
+  res.className = "res";
+  box.appendChild(res);
+
+  var ops = document.createElement("div");
+  ops.className = "ops";
+
+  var bTr = document.createElement("button");
+  bTr.className = "op";
+  bTr.textContent = OV[id] ? "重新翻译" : "翻译";
+  bTr.onclick = function(){ runTranslate(id, box, res, bTr); };
+  ops.appendChild(bTr);
+
+  box.appendChild(ops);
+
+  if (OV[id]) {
+    box.classList.add("done");
+    res.textContent = OV[id];
+    res.hidden = false;
+  } else {
+    res.hidden = true;
+  }
+  return box;
+}
+
+function refreshFragCard(id){
+  var box = aifragBox.querySelector('.aifrag[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  if (!box) return;
+  var res = box.querySelector(".res");
+  var bTr = box.querySelector(".op");
+  if (OV[id]) {
+    box.classList.add("done");
+    res.textContent = OV[id];
+    res.hidden = false;
+    if (bTr) bTr.textContent = "重新翻译";
+  } else if (DRAFT[id]) {
+    res.textContent = DRAFT[id];
+    res.hidden = false;
+  }
+}
+
+function runTranslate(id, box, res, btn){
+  if (aiBusy) return;
+  if (!AI.key) { alert("还没有填写 API Key，点右上角「设置」填一下。"); return; }
+  aiBusy = true;
+  btn.disabled = true;
+  res.hidden = false;
+  res.textContent = "…";
+  var acc = "";
+  var ctx = entryHint();
+
+  aiStream([
+    { role: "system", content: SYS_TR },
+    { role: "user", content: "条目：" + ctx + "\n待翻译片段：" + id }
+  ], function(delta){
+    acc += delta;
+    res.textContent = cleanReply(acc) || "…";
+  }).then(function(){
+    var zh = cleanReply(acc);
+    aiBusy = false;
+    btn.disabled = false;
+    if (!zh) { res.textContent = "（空响应）"; return; }
+    OV[id] = zh;
+    saveOV();
+    DRAFT[id] = zh;
+    box.classList.add("done");
+    res.textContent = zh;
+    btn.textContent = "重新翻译";
+    refreshAIStat();
+    redrawCurrent();
+  }).catch(function(e){
+    aiBusy = false;
+    btn.disabled = false;
+    res.textContent = "失败：" + (e && e.message ? e.message : e);
+  });
+}
+
+function runTranslateAll(){
+  if (aiBusy) return;
+  if (!AI.key) { alert("还没有填写 API Key，点右上角「设置」填一下。"); return; }
+  var todo = [];
+  for (var i = 0; i < frags.length; i++) if (!OV[frags[i]]) todo.push(frags[i]);
+  if (!todo.length) { alert("这个条目的片段都已经处理过了。"); return; }
+  if (!confirm("将对 " + todo.length + " 个片段逐个调用 AI 翻译，可能消耗较长时间和额度。继续？")) return;
+
+  var k = 0, fail = 0;
+  aiBusy = true;
+  var btn = document.getElementById("aibatch");
+  btn.disabled = true;
+
+  function step(){
+    if (k >= todo.length){
+      aiBusy = false;
+      btn.disabled = false;
+      refreshAIStat();
+      redrawCurrent();
+      return;
+    }
+    var id = todo[k];
+    aistat.textContent = "正在翻译 " + (k + 1) + " / " + todo.length + "：" + id;
+    var acc = "";
+    aiStream([
+      { role: "system", content: SYS_TR },
+      { role: "user", content: "条目：" + entryHint() + "\n待翻译片段：" + id }
+    ], function(d){ acc += d; }).then(function(){
+      var zh = cleanReply(acc);
+      if (zh) {
+        OV[id] = zh;
+        saveOV();
+        DRAFT[id] = zh;
+        refreshFragCard(id);
+      } else {
+        fail++;
+        var b = aifragBox.querySelector('.aifrag[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"] .res');
+        if (b) { b.hidden = false; b.textContent = "（空响应）"; }
+      }
+      k++;
+      step();
+    }).catch(function(e){
+      fail++;
+      var b = aifragBox.querySelector('.aifrag[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"] .res');
+      if (b) { b.hidden = false; b.textContent = "失败：" + (e && e.message ? e.message : e); }
+      k++;
+      step();
+    });
+  }
+  step();
+}
+
+function entryHint(){
+  if (current < 0) return "";
+  var e = IDX[current];
+  return (e[2] || "") + "（" + (e[1] || "") + "）";
+}
+
+function redrawCurrent(){
+  if (current < 0) return;
+  var paneT = document.getElementById("paneT");
+  paneT.innerHTML = "";
+  renderNode(DATA[current][0], paneT);
+}
+
+/* ---------- 问答 ---------- */
+
+function renderChat(){
+  aichatBox.innerHTML = "";
+  if (!chatLog.length){
+    var d = document.createElement("div");
+    d.className = "aiempty";
+    d.textContent = "可以就当前条目提问，回答会尽量简短。";
+    aichatBox.appendChild(d);
+    return;
+  }
+  for (var i = 0; i < chatLog.length; i++){
+    (function(m){
+      var box = document.createElement("div");
+      box.className = "aimsg " + (m.role === "user" ? "me" : "ai");
+      var w = document.createElement("div");
+      w.className = "who";
+      w.textContent = m.role === "user" ? "[我]" : "[AI]";
+      var b = document.createElement("div");
+      b.className = "bd" + (m.wait ? " wait" : "");
+      b.textContent = m.text || "";
+      box.appendChild(w); box.appendChild(b);
+      aichatBox.appendChild(box);
+    })(chatLog[i]);
+  }
+  aichatBox.scrollTop = aichatBox.scrollHeight;
+}
+
+function askEntry(){
+  var q = aiqInput.value.trim();
+  if (!q) return;
+  if (aiBusy) return;
+  if (!AI.key) { alert("还没有填写 API Key，点右上角「设置」填一下。"); return; }
+
+  aiqInput.value = "";
+  chatLog.push({ role: "user", text: q });
+  var reply = { role: "assistant", text: "", wait: true };
+  chatLog.push(reply);
+  renderChat();
+
+  var ctx = current >= 0 ? flatten(DATA[current][0]) : "";
+  if (ctx.length > 12000) ctx = ctx.slice(0, 12000) + "…";
+
+  var sys = "你是《明日方舟》游戏机制讲解助手。用户会就给定条目提问，"
+          + "请用简体中文回答，尽量简短（不超过 150 字）。不确定就直说，不要编造。";
+  var usr = "当前条目：" + entryHint() + "\n\n条目内容：\n" + ctx + "\n\n问题：" + q;
+
+  aiBusy = true;
+  document.getElementById("aisend").disabled = true;
+
+  aiStream([
+    { role: "system", content: sys },
+    { role: "user", content: usr }
+  ], function(d){
+    reply.text += d;
+    reply.wait = false;
+    renderChat();
+  }).then(function(){
+    aiBusy = false;
+    document.getElementById("aisend").disabled = false;
+    if (!reply.text) reply.text = "（没有返回内容）";
+    reply.wait = false;
+    renderChat();
+  }).catch(function(e){
+    aiBusy = false;
+    document.getElementById("aisend").disabled = false;
+    reply.text = "失败：" + (e && e.message ? e.message : e);
+    reply.wait = false;
+    renderChat();
+  });
+}
+
+/* ---------- 设置面板 ---------- */
+
+var setwrap = document.getElementById("setwrap");
+
+function openSettings(){
+  document.getElementById("sBase").value = AI.base;
+  document.getElementById("sModel").value = AI.model;
+  document.getElementById("sKey").value = AI.key;
+  document.getElementById("sTemp").value = String(AI.temp);
+  document.getElementById("sMax").value = String(AI.max);
+  document.getElementById("sJson").value = "";
+  var n = Object.keys(OV).length;
+  document.getElementById("sCacheInfo").textContent =
+    n ? "当前已缓存 " + n + " 条 AI 翻译。" : "当前还没有 AI 翻译缓存。";
+  setwrap.hidden = false;
+}
+
+function importJSON(){
+  var raw = document.getElementById("sJson").value.trim();
+  if (!raw) { alert("先把 .bena_ai.json 的内容粘进来。"); return; }
+  var j;
+  try { j = JSON.parse(raw); }
+  catch (e) { alert("这段内容不是合法的 JSON。"); return; }
+  var hit = 0;
+  if (typeof j.base_url === "string" && j.base_url) { document.getElementById("sBase").value = j.base_url; hit++; }
+  if (typeof j.model === "string" && j.model) { document.getElementById("sModel").value = j.model; hit++; }
+  if (typeof j.api_key === "string" && j.api_key) { document.getElementById("sKey").value = j.api_key; hit++; }
+  if (typeof j.temperature === "number") { document.getElementById("sTemp").value = String(j.temperature); hit++; }
+  if (typeof j.max_tokens === "number") { document.getElementById("sMax").value = String(j.max_tokens); hit++; }
+  if (!hit) { alert("这段 JSON 里没有可识别的字段（base_url / model / api_key 等）。"); return; }
+  alert("已填入 " + hit + " 项，别忘了点「保存」。");
+}
+
+function saveSettings(){
+  var base = document.getElementById("sBase").value.trim();
+  var model = document.getElementById("sModel").value.trim();
+  var key = document.getElementById("sKey").value.trim();
+  var temp = parseFloat(document.getElementById("sTemp").value);
+  var max = parseInt(document.getElementById("sMax").value, 10);
+
+  if (!base) { alert("接口地址不能为空。"); return; }
+  if (!model) { alert("模型名不能为空。"); return; }
+
+  AI.base = base;
+  AI.model = model;
+  AI.key = key;
+  AI.temp = (isFinite(temp) && temp >= 0 && temp <= 2) ? temp : 0.2;
+  AI.max = (isFinite(max) && max > 0) ? max : 512;
+
+  saveAICfg();
+  refreshAIStat();
+  setwrap.hidden = true;
+}
+
+function exportCache(){
+  var ids = Object.keys(OV);
+  if (!ids.length) { alert("还没有任何 AI 翻译缓存。"); return; }
+  ids.sort();
+  var lines = ["# AI 补译缓存", "", "共 " + ids.length + " 条。", ""];
+  for (var i = 0; i < ids.length; i++){
+    lines.push("- `" + ids[i] + "` → " + OV[ids[i]]);
+  }
+  copyText(lines.join("\n"), document.getElementById("sExp"));
+}
+
+/* ---------- 事件绑定 ---------- */
+
+document.getElementById("aiopen").addEventListener("click", openAIDrawer);
+document.getElementById("aiclose").addEventListener("click", closeAIDrawer);
+document.getElementById("aiset").addEventListener("click", openSettings);
+document.getElementById("aibatch").addEventListener("click", runTranslateAll);
+aiwrap.addEventListener("click", function(ev){ if (ev.target === aiwrap) closeAIDrawer(); });
+document.getElementById("aitabF").addEventListener("click", function(){ switchAITab("f"); });
+document.getElementById("aitabQ").addEventListener("click", function(){ switchAITab("q"); });
+document.getElementById("aisend").addEventListener("click", askEntry);
+aiqInput.addEventListener("keydown", function(ev){ if (ev.key === "Enter") askEntry(); });
+document.getElementById("setback").addEventListener("click", function(){ setwrap.hidden = true; });
+document.getElementById("sImport").addEventListener("click", importJSON);
+document.getElementById("sSave").addEventListener("click", saveSettings);
+document.getElementById("sExp").addEventListener("click", exportCache);
+document.getElementById("sClear").addEventListener("click", function(){
+  if (!confirm("确定清空全部 AI 翻译缓存？此操作不可撤销。")) return;
+  OV = Object.create(null);
+  DRAFT = Object.create(null);
+  saveOV();
+  openSettings();
+  refreshAIStat();
+  renderFragList();
+  redrawCurrent();
 });
 
 /* ---------- 启动 ---------- */
