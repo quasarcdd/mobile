@@ -1,0 +1,4 @@
+# 统一用 LF，避免 Windows 本地与 Linux 构建机之间行尾不一致
+* text=auto eol=lf
+*.png binary
+*.ico binary

@@ -1,0 +1,64 @@
+name: 构建并发布手机版
+
+on:
+  # 任何推送都重建一次，省得去 Actions 页面手点
+  push:
+  schedule:
+    # 每天 20:00 UTC（北京时间次日 04:00）自动重建一次
+    - cron: "0 20 * * *"
+  # 也可以到 Actions 页面手动点一下立即构建
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个，新的构建会取消排队中的旧构建
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 取出仓库
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 构建单文件页面
+        run: python build.py -o dist/index.html
+
+      # 注意：这里刻意不用 actions/configure-pages 的 enablement:true 去自动开启 Pages。
+      # 仓库自带的 GITHUB_TOKEN 没有创建 Pages 站点的权限，那样会报
+      # 「Resource not accessible by integration」直接失败。
+      # 请先在 Settings → Pages 把 Source 手动设为「GitHub Actions」。
+      - name: 上传页面产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: 同时存一份可下载的页面文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: 贝娜的量角器-手机版
+          path: dist/index.html
+          retention-days: 30
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
