@@ -23,6 +23,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # 保活提交需要写权限；顶层保持 read，发布任务用不到写权限
+    permissions:
+      contents: write
     steps:
       - name: 取出仓库
         uses: actions/checkout@v4
@@ -51,6 +54,24 @@ jobs:
           path: dist/index.html
           retention-days: 30
           if-no-files-found: error
+
+      # 保活：公开仓库只要连续 60 天没有任何代码活动，GitHub 就会自动停用定时触发，
+      # 而定时任务自己跑起来并不算「仓库活动」。所以每月补一条提交，把计时器压回去。
+      # 用 GITHUB_TOKEN 推送不会再触发工作流（GitHub 有意防递归），[skip ci] 是第二道保险。
+      - name: 保活提交（每月一次）
+        if: always() && github.ref == 'refs/heads/master'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          stamp=$(date -u +%Y-%m)
+          if [ "$(cat .keepalive 2>/dev/null)" = "$stamp" ]; then
+            echo "本月已有活动记录（$stamp），跳过"
+            exit 0
+          fi
+          printf '%s\n' "$stamp" > .keepalive
+          git add .keepalive
+          git commit -m "chore: 保活 $stamp [skip ci]"
+          git push
 
   deploy:
     needs: build
