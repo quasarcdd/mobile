@@ -125,6 +125,7 @@ pre{
       <button class="iconbtn" id="clr" title="清空">×</button>
     </div>
     <div class="filters" id="filters"></div>
+    <div class="filters" id="subfilters" hidden></div>
   </div>
   <div class="stat"><span id="stat"></span><span id="ver"></span></div>
   <div class="list" id="list"></div>
@@ -158,6 +159,16 @@ pre{
 "use strict";
 var META = __META__;
 var TYPE_LABEL = {buff:"常见Buff", buff_template:"Buff模板", global_buff:"全局Buff", rogue_item:"肉鸽物品"};
+/* 肉鸽主题子分类：[id, 显示名, 完整主题名]，id 与 export_data.py 的 ROGUE_SEASON_ID 对应 */
+var ROGUE_SEASONS = [
+  [1, "傀影肉鸽", "傀影与猩红孤钻"],
+  [2, "水月", "水月与深蓝之树"],
+  [3, "萨米", "探索者的银淞止境"],
+  [4, "萨卡兹", "萨卡兹的无终奇语"],
+  [5, "界园", "岁的界园志异"],
+  [6, "黑流树海", "沉沦者的黑流树海"]
+];
+var ROGUE_TYPE = -1;
 var LIMIT = 200;
 
 var boot = document.getElementById("boot");
@@ -205,13 +216,14 @@ async function load(){
 }
 
 /* ---------- 搜索 ---------- */
-var filter = -1, results = [], shown = 0, query = "";
+var filter = -1, subFilter = 0, results = [], shown = 0, query = "";
 
 function doSearch(){
   var kws = query.toLowerCase().split(/\s+/).filter(function(s){ return s.length > 0; });
   results = [];
   for (var i = 0; i < IDX.length; i++) {
     if (filter >= 0 && IDX[i][0] !== filter) continue;
+    if (subFilter && IDX[i][4] !== subFilter) continue;
     var ok = true;
     for (var k = 0; k < kws.length; k++) {
       if (LOWER[i].indexOf(kws[k]) < 0) { ok = false; break; }
@@ -476,7 +488,50 @@ document.getElementById("clr").addEventListener("click", function(){
   q.value = ""; query = ""; doSearch(); q.focus();
 });
 
+function countType(t){
+  var n = 0;
+  for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === t) n++;
+  return n;
+}
+
+function countSub(s){
+  var n = 0;
+  for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === ROGUE_TYPE && IDX[i][4] === s) n++;
+  return n;
+}
+
+/* 肉鸽主题子分类，只在选中「肉鸽物品」时出现 */
+function buildSubFilters(){
+  var box = document.getElementById("subfilters");
+  box.innerHTML = "";
+  var all = document.createElement("button");
+  all.className = "f on";
+  all.textContent = "全部肉鸽 " + countType(ROGUE_TYPE);
+  all.onclick = function(){ setSubFilter(0, all); };
+  box.appendChild(all);
+  for (var j = 0; j < ROGUE_SEASONS.length; j++) {
+    (function(season){
+      var b = document.createElement("button");
+      b.className = "f";
+      b.textContent = season[1] + " " + countSub(season[0]);
+      b.title = season[2];
+      b.onclick = function(){ setSubFilter(season[0], b); };
+      box.appendChild(b);
+    })(ROGUE_SEASONS[j]);
+  }
+}
+
+function setSubFilter(s, btn){
+  subFilter = s;
+  var kids = document.getElementById("subfilters").children;
+  for (var i = 0; i < kids.length; i++) kids[i].classList.remove("on");
+  btn.classList.add("on");
+  document.getElementById("list").scrollTop = 0;
+  doSearch();
+}
+
 function buildFilters(){
+  ROGUE_TYPE = META.types.indexOf("rogue_item");
   var box = document.getElementById("filters");
   var all = document.createElement("button");
   all.className = "f on";
@@ -488,9 +543,7 @@ function buildFilters(){
       var nm = META.types[t];
       var b = document.createElement("button");
       b.className = "f";
-      var n = 0;
-      for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === t) n++;
-      b.textContent = (TYPE_LABEL[nm] || nm) + " " + n;
+      b.textContent = (TYPE_LABEL[nm] || nm) + " " + countType(t);
       b.onclick = function(){ setFilter(t, b); };
       box.appendChild(b);
     })(t);
@@ -502,6 +555,10 @@ function setFilter(t, btn){
   var kids = document.getElementById("filters").children;
   for (var i = 0; i < kids.length; i++) kids[i].classList.remove("on");
   btn.classList.add("on");
+  subFilter = 0;
+  var sub = document.getElementById("subfilters");
+  if (t === ROGUE_TYPE) { buildSubFilters(); sub.hidden = false; }
+  else { sub.hidden = true; sub.innerHTML = ""; }
   document.getElementById("list").scrollTop = 0;
   doSearch();
 }

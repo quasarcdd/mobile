@@ -6,11 +6,12 @@
 
     {
       "meta":  { 构建信息 },
-      "index": [ [type, key, 显示名, 搜索文本], ... ],   # 目录，顺序与 data 一一对应
+      "index": [ [type, key, 显示名, 搜索文本, 子分类], ... ],   # 目录，顺序与 data 一一对应
       "data":  [ [译文树, [原文紧凑JSON字符串, ...]], ... ]
     }
 
 type: 0=常见Buff  1=Buff模板  2=全局Buff  3=肉鸽物品
+子分类: 只有肉鸽物品（type=3）有意义，1..6 对应 rogue_1..rogue_6，其余为 0
 """
 import os
 import sys
@@ -23,6 +24,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 TYPES = ["buff", "buff_template", "global_buff", "rogue_item"]
 TYPE_ID = {name: i for i, name in enumerate(TYPES)}
+
+# 肉鸽季度 → 主题子分类 id，与 template.html 里的 ROGUE_SEASONS 一一对应
+ROGUE_SEASON_ID = {"rogue_" + str(n): n for n in range(1, 7)}
 
 
 class _Sink:
@@ -107,12 +111,12 @@ def build(seasons):
     data = []
     stats = {t: {"total": 0, "shown": 0, "error": 0, "untranslated": 0, "failed": 0} for t in TYPES}
 
-    def add(type_name, key, display_name, translation, raw_list):
-        index.append([TYPE_ID[type_name], key, display_name, display_name + " " + key])
+    def add(type_name, key, display_name, translation, raw_list, sub=0):
+        index.append([TYPE_ID[type_name], key, display_name, display_name + " " + key, sub])
         data.append([translation, raw_list])
         stats[type_name]["shown"] += 1
 
-    def emit(type_name, key, display_name, translate, raw_list):
+    def emit(type_name, key, display_name, translate, raw_list, sub=0):
         try:
             trans = polish(translate())
         except Exception as e:
@@ -121,7 +125,7 @@ def build(seasons):
         u, f = count_markers(trans)
         stats[type_name]["untranslated"] += u
         stats[type_name]["failed"] += f
-        add(type_name, key, display_name, trans, raw_list)
+        add(type_name, key, display_name, trans, raw_list, sub)
 
     stats["buff"]["total"] = len(bena.BUFF_KEYS)
     for key in bena.BUFF_KEYS:
@@ -150,7 +154,8 @@ def build(seasons):
         if obj.item_data is not None:
             raw.append(compact(obj.item_data))
         emit("rogue_item", key, "[" + obj.display_type + "]" + obj.display_name,
-             lambda o=obj: anne.translate_whole_rogue_item(o), raw)
+             lambda o=obj: anne.translate_whole_rogue_item(o), raw,
+             ROGUE_SEASON_ID.get(obj.season, 0))
 
     return index, data, stats
 
