@@ -263,7 +263,7 @@ pre{
     <div class="field">
       <label>API Key</label>
       <input id="sKey" type="password" placeholder="sk-…" autocapitalize="off" autocorrect="off" spellcheck="false">
-      <div class="hint warn">API Key 只保存在本页内存里，不会写入本地存储，也不会写进这个 HTML 文件。关闭或刷新页面后需要重新填写。</div>
+      <div class="hint warn">API Key 只保存在本标签页的会话存储里：刷新页面不用重填，关闭标签页后自动清除。不会写入长期本地存储，也不会写进这个 HTML 文件。</div>
     </div>
     <div class="field">
       <label>温度 temperature</label>
@@ -750,9 +750,11 @@ document.getElementById("list").addEventListener("scroll", function(){
 
 /* ---------- AI 抽屉 ---------- */
 
-/* 配置：API Key 只放内存，其余非敏感项持久化 */
+/* 配置：非敏感项持久化到 localStorage；API Key 只放本标签页的 sessionStorage，
+   刷新不用重填，关闭标签页即清除，不进长期本地存储 */
 var AI = { base: "https://api.deepseek.com/v1", model: "deepseek-chat", key: "", temp: 0.2, max: 512 };
 var CFG_LS = "bena_ai_cfg";
+var KEY_SS = "bena_ai_key";
 var OV_LS = "bena_ai_ov";
 var OV = Object.create(null);
 var DRAFT = Object.create(null);
@@ -765,6 +767,7 @@ var DRAFT = Object.create(null);
     if (typeof s.temp === "number") AI.temp = s.temp;
     if (typeof s.max === "number") AI.max = s.max;
   } catch (e) {}
+  try { AI.key = sessionStorage.getItem(KEY_SS) || ""; } catch (e) {}
   try {
     var o = JSON.parse(localStorage.getItem(OV_LS) || "{}");
     if (o && typeof o === "object") OV = o;
@@ -776,6 +779,11 @@ function saveAICfg(){
     localStorage.setItem(CFG_LS, JSON.stringify({
       base: AI.base, model: AI.model, temp: AI.temp, max: AI.max
     }));
+  } catch (e) {}
+  /* Key 单独走 sessionStorage，不写进上面的持久化配置 */
+  try {
+    if (AI.key) sessionStorage.setItem(KEY_SS, AI.key);
+    else sessionStorage.removeItem(KEY_SS);
   } catch (e) {}
 }
 function saveOV(){
@@ -917,7 +925,7 @@ var chatLog = [];
 
 function aiStatusText(){
   return AI.key
-    ? "AI 服务：" + AI.model + "（Key 仅本次会话有效，不会保存）"
+    ? "AI 服务：" + AI.model + "（Key 仅本标签页有效，关闭标签页后清除）"
     : "尚未配置：点「设置」填入接口地址、模型和 API Key";
 }
 
@@ -1228,6 +1236,12 @@ function saveSettings(){
 
   if (!base) { alert("接口地址不能为空。"); return; }
   if (!model) { alert("模型名不能为空。"); return; }
+  /* 非 https 的地址会把 API Key 明文发到网络上；只放行本机回环地址（Ollama / LM Studio） */
+  if (!/^https:\/\//i.test(base) &&
+      !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(base)) {
+    alert("接口地址必须以 https:// 开头，避免 API Key 明文传输。\n本机模型（Ollama / LM Studio）可用 http://localhost 或 http://127.0.0.1。");
+    return;
+  }
 
   AI.base = base;
   AI.model = model;

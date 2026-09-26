@@ -23,7 +23,9 @@ Actions 定时 → 拉上游 Python 规则 + 鹰角游戏数据 → 在云端跑
 - **问答**：就当前条目提问，回答流式输出
 
 在抽屉「设置」里填 OpenAI 兼容接口（DeepSeek / 硅基流动 / Ollama / LM Studio…）的 `base_url`、模型名与 API Key 即可，
-也可把桌面版 `.bena_ai.json` 整段粘进「粘贴配置 JSON」导入。**API Key 只存在页面内存里，不落盘、不写进 HTML**；
+也可把桌面版 `.bena_ai.json` 整段粘进「粘贴配置 JSON」导入。**API Key 只存在本标签页的会话存储（sessionStorage）里**：
+刷新不用重填，关闭标签页后自动清除，不写入长期本地存储，也不写进 HTML。接口地址强制 `https://`
+（本机模型可用 `http://localhost` / `http://127.0.0.1`），避免 Key 明文传输。
 翻译结果缓存在浏览器本地，可「导出缓存」成 Markdown，不会修改任何词典文件。
 
 不配置就一直完全离线，只有点「翻译」或「问」时才联网。接口需放行 CORS 才能被浏览器直接调用。
