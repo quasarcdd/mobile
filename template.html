@@ -7,15 +7,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https: http://localhost:* http://127.0.0.1:* http://[::1]:*; form-action 'none'; base-uri 'none'">
 <title>贝娜的量角器</title>
 <style>
+/* 主题由 <html data-theme> 决定。head 里的那段脚本会在页面渲染前先算好并写上，
+   免得刷新时闪一下浅色。「跟随系统」不是第三种取值，而是在计算时展开成 light / dark。 */
 :root{
+  color-scheme:light;
   --bg:#f6f6f4; --card:#fff; --fg:#1b1b19; --muted:#71716b; --line:#e3e1da;
   --accent:#185fa5; --chip:#eceff4; --accent-fg:#fff; --code:#f2f2ef;
+  --err:#c0366b; --who-me:#175fa8; --who-ai:#2f7d52;
 }
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#15161a; --card:#1d1f24; --fg:#e9e9e6; --muted:#97978f; --line:#2b2e34;
-    --accent:#7fb3e8; --chip:#24272d; --accent-fg:#0d1520; --code:#1a1c21;
-  }
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#15161a; --card:#1d1f24; --fg:#e9e9e6; --muted:#97978f; --line:#2b2e34;
+  --accent:#7fb3e8; --chip:#24272d; --accent-fg:#0d1520; --code:#1a1c21;
+  --err:#ef9db4; --who-me:#7fb3e8; --who-ai:#5fcf97;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
@@ -41,6 +45,11 @@ body{
 .iconbtn{
   flex:0 0 auto;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--muted);font-size:18px;line-height:1;cursor:pointer;
+}
+/* 主题按钮里放的是一个汉字（自 / 浅 / 深），居中一下 */
+.iconbtn.tm{
+  font-size:15px;font-weight:500;color:var(--fg);
+  display:flex;align-items:center;justify-content:center;
 }
 .filters{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
@@ -102,8 +111,9 @@ body{
   font-size:12px;cursor:pointer;white-space:normal;word-break:break-all;
   font-family:ui-monospace,Menlo,Consolas,monospace;
 }
-/* 工具里没有对应条目的转跳：保留显示，但明确表示「跳不过去」 */
-.lk.miss{color:var(--muted);border-style:dashed;opacity:.7}
+/* 工具里没有对应条目的转跳：保留显示，但明确表示「跳不过去」。
+   这里不用 opacity —— 深色主题下 --muted 再压暗就看不清了 */
+.lk.miss{color:var(--muted);border-style:dashed}
 .rawh{font-weight:500;font-size:13px;color:var(--muted);margin:12px 0 4px}
 pre{
   margin:0;padding:10px;border-radius:10px;background:var(--code);border:1px solid var(--line);
@@ -118,7 +128,7 @@ pre{
   border-radius:50%;animation:sp .8s linear infinite;
 }
 @keyframes sp{to{transform:rotate(360deg)}}
-.err{color:#d4537e;padding:24px;font-size:14px;text-align:center;max-width:520px}
+.err{color:var(--err);padding:24px;font-size:14px;text-align:center;max-width:520px}
 
 /* ---------- AI 抽屉 ---------- */
 .aiwrap{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;background:rgba(0,0,0,.4)}
@@ -166,8 +176,8 @@ pre{
 }
 .aimsg{margin-bottom:10px;font-size:13.5px;line-height:1.65;overflow-wrap:anywhere}
 .aimsg .who{font-size:12.5px;font-weight:500;margin-bottom:2px}
-.aimsg.me .who{color:#4a86c8}
-.aimsg.ai .who{color:#3f9e6a}
+.aimsg.me .who{color:var(--who-me)}
+.aimsg.ai .who{color:var(--who-ai)}
 .aimsg .bd{white-space:pre-wrap}
 .aimsg .bd.wait{color:var(--muted)}
 .aiover{color:var(--accent);font-weight:500}
@@ -184,8 +194,22 @@ pre{
   font-family:ui-monospace,Menlo,Consolas,monospace;
 }
 .hint{font-size:12px;color:var(--muted);line-height:1.7}
-.hint.warn{color:#d4537e}
+.hint.warn{color:var(--err)}
 </style>
+<script>
+/* 在页面渲染前先把主题定下来，否则刷新时会先闪一下浅色。
+   只算 light / dark，「跟随系统」在这里就展开成具体值。 */
+(function(){
+  var dark = false;
+  try {
+    var m = localStorage.getItem("bena_theme");
+    dark = m === "dark" ||
+      ((m === "auto" || !m) && window.matchMedia &&
+       window.matchMedia("(prefers-color-scheme: dark)").matches);
+  } catch (e) {}
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+})();
+</script>
 </head>
 <body>
 
@@ -194,6 +218,7 @@ pre{
     <div class="srow">
       <input id="q" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="搜索干员 / Buff / 藏品 / ID">
       <button class="iconbtn" id="clr" title="清空">×</button>
+      <button class="iconbtn tm" id="theme" title="主题">自</button>
     </div>
     <div class="filters" id="filters"></div>
     <div class="filters" id="subfilters" hidden></div>
@@ -680,6 +705,53 @@ q.addEventListener("input", function(){
 document.getElementById("clr").addEventListener("click", function(){
   q.value = ""; query = ""; doSearch(); q.focus();
 });
+
+/* ---------- 主题 ---------- */
+/* 三态循环：跟随系统 → 浅色 → 深色。存 localStorage，刷新后保持。
+   注意「跟随系统」本身不是一种配色，applyTheme 会把它展开成 light / dark 再写回 data-theme。 */
+var THEME_LS = "bena_theme";
+var THEMES = [
+  { id: "auto",  mark: "自", tip: "跟随系统" },
+  { id: "light", mark: "浅", tip: "浅色" },
+  { id: "dark",  mark: "深", tip: "深色" }
+];
+var themeBtn = document.getElementById("theme");
+
+function themeMode(){
+  try {
+    var m = localStorage.getItem(THEME_LS);
+    if (m === "light" || m === "dark" || m === "auto") return m;
+  } catch (e) {}
+  return "auto";
+}
+
+function applyTheme(){
+  var cur = themeMode(), t = THEMES[0];
+  for (var i = 0; i < THEMES.length; i++) if (THEMES[i].id === cur) t = THEMES[i];
+  var dark = t.id === "dark" ||
+    (t.id === "auto" && window.matchMedia &&
+     window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  themeBtn.textContent = t.mark;
+  themeBtn.title = "主题：" + t.tip + "（点击切换）";
+}
+
+themeBtn.addEventListener("click", function(){
+  var cur = themeMode(), i = 0;
+  for (var k = 0; k < THEMES.length; k++) if (THEMES[k].id === cur) i = k;
+  var next = THEMES[(i + 1) % THEMES.length].id;
+  try { localStorage.setItem(THEME_LS, next); } catch (e) {}
+  applyTheme();
+});
+
+/* 选「跟随系统」时，系统自己切到深色/浅色也要跟着变 */
+if (window.matchMedia) {
+  var mqDark = window.matchMedia("(prefers-color-scheme: dark)");
+  var onSysTheme = function(){ if (themeMode() === "auto") applyTheme(); };
+  if (mqDark.addEventListener) mqDark.addEventListener("change", onSysTheme);
+  else if (mqDark.addListener) mqDark.addListener(onSysTheme);
+}
+applyTheme();
 
 function countType(t){
   var n = 0;
