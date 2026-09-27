@@ -102,6 +102,8 @@ body{
   font-size:12px;cursor:pointer;white-space:normal;word-break:break-all;
   font-family:ui-monospace,Menlo,Consolas,monospace;
 }
+/* 工具里没有对应条目的转跳：保留显示，但明确表示「跳不过去」 */
+.lk.miss{color:var(--muted);border-style:dashed;opacity:.7}
 .rawh{font-weight:500;font-size:13px;color:var(--muted);margin:12px 0 4px}
 pre{
   margin:0;padding:10px;border-radius:10px;background:var(--code);border:1px solid var(--line);
@@ -545,6 +547,17 @@ function flatten(node){
   return out.join("\n");
 }
 
+/* 在目录里找转跳目标：先按 link 自带的类型找，找不到再跨类型找一遍。
+   找不到就是工具里确实没有这个条目。 */
+function findTarget(typeName, k){
+  if (typeName && MAP[typeName + ":" + k] !== undefined) return MAP[typeName + ":" + k];
+  for (var t = 0; t < META.types.length; t++) {
+    var j = MAP[META.types[t] + ":" + k];
+    if (j !== undefined) return j;
+  }
+  return undefined;
+}
+
 function makeLinks(link, host){
   if (!link) return;
   var box = document.createElement("div");
@@ -573,26 +586,26 @@ function makeLinks(link, host){
         kk = sp.slice(1).join(".");
       }
       chip.textContent = "转跳 · " + key;
-      chip.onclick = function(tn, k){
-        return function(ev){
-          ev.stopPropagation();
-          var idx = tn ? MAP[tn + ":" + k] : undefined;
-          if (idx === undefined) {
-            for (var t = 0; t < META.types.length; t++) {
-              var j = MAP[META.types[t] + ":" + k];
-              if (j !== undefined) { idx = j; break; }
-            }
-          }
-          if (idx !== undefined) { openEntry(idx); }
-          else {
-            gotoHome();
-            document.getElementById("q").value = k;
-            query = k;
-            doSearch();
-            document.getElementById("list").scrollTop = 0;
-          }
-        };
-      }(typeName, kk);
+      var target = findTarget(typeName, kk);
+      if (target === undefined) {
+        /* 工具里没有这个条目。以前点了会跳回首页、拿它当关键词再搜一遍，
+           而这类内部标识根本搜不到，最后只剩下一个空列表，
+           原本在读的条目也被顶掉了，只能重新找回来。所以这里只说明，不导航。 */
+        chip.classList.add("miss");
+        chip.onclick = function(k){
+          return function(ev){
+            ev.stopPropagation();
+            alert("工具里没有 " + k + " 这个条目，无法跳转。");
+          };
+        }(key);
+      } else {
+        chip.onclick = function(i){
+          return function(ev){
+            ev.stopPropagation();
+            openEntry(i);
+          };
+        }(target);
+      }
     }
     box.appendChild(chip);
   }
