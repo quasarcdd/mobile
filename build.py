@@ -5,7 +5,8 @@
 → 打包成一个自包含的 HTML 文件，手机浏览器直接打开即可。
 
 用法：
-    python build.py                      # 拉最新上游规则；游戏数据缺失时自动下载
+    python build.py                      # 拉上游规则（默认锁定到已确认的 commit）；数据缺失时自动下载
+    python build.py --upstream-ref main  # 不锁定，跟随上游 main 的最新代码
     python build.py --tables ../tables   # 复用已有的游戏数据目录，不重复下载
     python build.py --no-update          # 不联网更新上游源码
     python build.py --update-data        # 强制重新下载游戏数据
@@ -32,7 +33,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 UPSTREAM_REPO = "TeamTorappu/BenaProtractor"
 UPSTREAM_API = "https://api.github.com/repos/%s/commits/main" % UPSTREAM_REPO
-UPSTREAM_TARBALL = "https://codeload.github.com/%s/tar.gz/refs/heads/main" % UPSTREAM_REPO
+
+# 这个构建是无人值守、定时自动跑的，而且会直接 import 上游代码在构建机上执行，
+# 产物每天自动发布到 GitHub Pages —— 用户正是在那个页面里填写 AI 接口的 API Key。
+# 所以上游不能跟着 main 走：一旦上游仓库被入侵，恶意代码会顺着这条链一路到用户眼前。
+# 默认锁定到人工确认过的 commit。升级规则时：看过上游 diff → 改这里 → 提交。
+# 想临时跟随最新，用 --upstream-ref main。
+UPSTREAM_PIN = "0e517129366308bc406e6fc37e52dde46df34040"
+
+
+def upstream_tarball(ref):
+    return "https://codeload.github.com/%s/tar.gz/%s" % (UPSTREAM_REPO, ref)
 
 REQUIRED_TABLES = [
     "buff_table.json",
@@ -84,8 +95,11 @@ def latest_sha():
     return data.get("sha"), (data.get("commit", {}).get("committer", {}) or {}).get("date", "")
 
 
-def sync_upstream():
-    """把上游源码同步进 .src（保留 tables/）。返回 (sha, date, 是否变更)。"""
+def sync_upstream(ref):
+    """把上游源码同步进 .src（保留 tables/）。返回 (sha, date, 是否变更)。
+
+    ref 是完整 commit SHA 时按锁定版本同步，不联网查版本；传 "main" 才是跟随最新。
+    """
     stamp_path = os.path.join(SRC, ".upstream.json")
     old = {}
     if os.path.exists(stamp_path):
@@ -94,21 +108,28 @@ def sync_upstream():
         except Exception:
             old = {}
 
-    try:
-        sha, date = latest_sha()
-    except Exception as e:
-        if os.path.exists(os.path.join(SRC, "anne.py")):
-            log("拉取上游版本信息失败（%s），沿用现有 .src" % e)
-            return old.get("sha", "unknown"), old.get("date", ""), False
-        raise SystemExit("拉取上游版本信息失败，且 .src 里没有可用源码：%s" % e)
+    pinned = ref != "main"
+    if pinned:
+        sha, date = ref, old.get("date", "")
+        if old.get("sha") == ref and os.path.exists(os.path.join(SRC, "anne.py")):
+            log("上游已锁定 %s，本地源码一致" % ref[:7])
+            return sha, date, False
+    else:
+        try:
+            sha, date = latest_sha()
+        except Exception as e:
+            if os.path.exists(os.path.join(SRC, "anne.py")):
+                log("拉取上游版本信息失败（%s），沿用现有 .src" % e)
+                return old.get("sha", "unknown"), old.get("date", ""), False
+            raise SystemExit("拉取上游版本信息失败，且 .src 里没有可用源码：%s" % e)
 
-    if sha and sha == old.get("sha") and os.path.exists(os.path.join(SRC, "anne.py")):
-        log("上游未更新（%s）" % sha[:7])
-        return sha, date, False
+        if sha and sha == old.get("sha") and os.path.exists(os.path.join(SRC, "anne.py")):
+            log("上游未更新（%s）" % sha[:7])
+            return sha, date, False
 
-    log("下载上游源码 %s ..." % (sha or "")[:7])
+    log("下载上游源码 %s ..." % ref[:7])
     try:
-        blob = http_get(UPSTREAM_TARBALL, timeout=300)
+        blob = http_get(upstream_tarball(ref), timeout=300)
     except Exception as e:
         if os.path.exists(os.path.join(SRC, "anne.py")):
             log("下载失败，沿用现有 .src 的源码（规则可能不是最新）")
@@ -149,7 +170,8 @@ def sync_upstream():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    json.dump({"sha": sha, "date": date, "syncedAt": time.strftime("%Y-%m-%d %H:%M:%S")},
+    json.dump({"sha": sha, "date": date, "ref": ref, "pinned": pinned,
+               "syncedAt": time.strftime("%Y-%m-%d %H:%M:%S")},
               open(stamp_path, "w", encoding="utf-8"))
     log("上游源码已同步，共 %d 个文件" % sum(len(f) for _, _, f in os.walk(SRC)))
     return sha, date, True
@@ -270,6 +292,8 @@ def main():
     ap.add_argument("--workdir", default=HERE, help="中间产物存放目录（默认脚本所在目录）")
     ap.add_argument("--tables", default="", help="已有的游戏数据目录，指定后不重复下载")
     ap.add_argument("--seasons", default="1,2,3,4,5,6")
+    ap.add_argument("--upstream-ref", default=UPSTREAM_PIN,
+                    help="上游 ref：完整 commit SHA（锁定）或 main（跟随最新）。默认 %s" % UPSTREAM_PIN[:7])
     ap.add_argument("--no-update", action="store_true", help="不联网更新上游源码")
     ap.add_argument("--update-data", action="store_true", help="强制重新下载游戏数据")
     ap.add_argument("--keep-temp", action="store_true", help="保留中间的 data.json / data.json.gz")
@@ -288,7 +312,7 @@ def main():
         sha, date = "local", ""
         log("跳过联网更新，使用现有 .src")
     else:
-        sha, date, changed = sync_upstream()
+        sha, date, changed = sync_upstream(args.upstream_ref)
 
     # 游戏数据的候选来源：显式指定 > 工作目录上一级的 tables/ > 联网下载
     fallback = os.path.join(os.path.dirname(WORKDIR), "tables")
