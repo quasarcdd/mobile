@@ -1,13 +1,22 @@
 name: 构建并发布手机版
 
 on:
-  # 任何推送都重建一次，省得去 Actions 页面手点
-  push:
+  # 只保留定时触发：任何推送都不再重建。
   schedule:
     # 每天 20:00 UTC（北京时间次日 04:00）自动重建一次
     - cron: "0 20 * * *"
-  # 也可以到 Actions 页面手动点一下立即构建
+  # 需要立刻同步上游时，在 Actions 页面点「Run workflow」手动跑一次。
   workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "上游源码：留空 = 用 build.py 里锁定的 SHA；填 main = 跟随上游最新；也可填完整 40 位 SHA"
+        required: false
+        type: string
+      lock_ref:
+        description: "构建成功后把本次用的上游 SHA 写回 build.py 的 UPSTREAM_PIN 并提交（之后的定时任务就用新版本）"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -37,7 +46,17 @@ jobs:
           python-version: "3.12"
 
       - name: 构建单文件页面
-        run: python build.py -o dist/index.html
+        env:
+          # 定时触发时这个值是空字符串，走 build.py 里锁定的 UPSTREAM_PIN
+          UPSTREAM_REF: ${{ inputs.upstream_ref }}
+        run: |
+          if [ -n "$UPSTREAM_REF" ]; then
+            echo "按手动指定的 ref 构建：$UPSTREAM_REF"
+            python build.py -o dist/index.html --upstream-ref "$UPSTREAM_REF"
+          else
+            echo "按 build.py 里锁定的 UPSTREAM_PIN 构建"
+            python build.py -o dist/index.html
+          fi
 
       # 注意：这里刻意不用 actions/configure-pages 的 enablement:true 去自动开启 Pages。
       # 仓库自带的 GITHUB_TOKEN 没有创建 Pages 站点的权限，那样会报
@@ -55,6 +74,66 @@ jobs:
           path: dist/index.html
           retention-days: 30
           if-no-files-found: error
+
+  # 手动同步上游后，把这次实际用的 SHA 钉进 build.py，
+  # 否则下一次定时任务会拿旧 SHA 重建，把刚同步的内容覆盖回去。
+  # 单独一个 job：它需要写权限，而上面的 build 要执行上游代码，不能带写权限。
+  lock-ref:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.lock_ref
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 取出仓库
+        uses: actions/checkout@v4
+
+      - name: 解析本次使用的上游 SHA
+        id: resolve
+        env:
+          REF: ${{ inputs.upstream_ref }}
+        run: |
+          set -euo pipefail
+          if [ -n "$REF" ] && [ "$REF" != "main" ]; then
+            if ! printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "::error::upstream_ref 既不是 main 也不是 40 位 SHA：$REF"
+              exit 1
+            fi
+            sha="$REF"
+          else
+            sha=$(python -c "import json,urllib.request as u; print(json.load(u.urlopen('https://api.github.com/repos/TeamTorappu/BenaProtractor/commits/main'))['sha'])")
+          fi
+          echo "本次使用的上游 SHA：$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: 写回 build.py 的 UPSTREAM_PIN
+        env:
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re, pathlib
+          sha = os.environ["SHA"]
+          p = pathlib.Path("build.py")
+          s = p.read_text(encoding="utf-8")
+          new, n = re.subn(
+              r'(?m)^(UPSTREAM_PIN\s*=\s*")[0-9a-f]{40}(")',
+              lambda m: m.group(1) + sha + m.group(2), s)
+          if n != 1:
+              raise SystemExit("UPSTREAM_PIN 匹配到 %d 处，期望 1 处" % n)
+          p.write_text(new, encoding="utf-8", newline="\n")
+          print("UPSTREAM_PIN 已更新为", sha)
+          PY
+
+      - name: 提交
+        env:
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build.py
+          git commit -m "build: 锁定上游到 $SHA [skip ci]"
+          git push
 
   # 保活：公开仓库只要连续 60 天没有任何代码活动，GitHub 就会自动停用定时触发，
   # 而定时任务自己跑起来并不算「仓库活动」。所以每月补一条提交，把计时器压回去。
