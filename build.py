@@ -39,7 +39,7 @@ UPSTREAM_API = "https://api.github.com/repos/%s/commits/main" % UPSTREAM_REPO
 # 所以上游不能跟着 main 走：一旦上游仓库被入侵，恶意代码会顺着这条链一路到用户眼前。
 # 默认锁定到人工确认过的 commit。升级规则时：看过上游 diff → 改这里 → 提交。
 # 想临时跟随最新，用 --upstream-ref main。
-UPSTREAM_PIN = "cad69c6471f3ffaa41905424accf3870113e6d2a"
+UPSTREAM_PIN = "df26933a962a46cbd99f2cee31d24c5f6529b7a2"
 
 
 def upstream_tarball(ref):
