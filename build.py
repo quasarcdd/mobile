@@ -35,11 +35,11 @@ UPSTREAM_REPO = "TeamTorappu/BenaProtractor"
 UPSTREAM_API = "https://api.github.com/repos/%s/commits/main" % UPSTREAM_REPO
 
 # 这个构建是无人值守、定时自动跑的，而且会直接 import 上游代码在构建机上执行，
-# 产物每天自动发布到 GitHub Pages —— 用户正是在那个页面里填写 AI 接口的 API Key。
+# 产物每天自动发布到 GitHub Pages，上游的任何改动都会直达用户浏览器。
 # 所以上游不能跟着 main 走：一旦上游仓库被入侵，恶意代码会顺着这条链一路到用户眼前。
 # 默认锁定到人工确认过的 commit。升级规则时：看过上游 diff → 改这里 → 提交。
 # 想临时跟随最新，用 --upstream-ref main。
-UPSTREAM_PIN = "4da254fd012584dd7f4d888270e3486ceae75fc9"
+UPSTREAM_PIN = "9e5e879f3106e156f42c0b95942a4c7f07b250ee"
 
 
 def upstream_tarball(ref):
