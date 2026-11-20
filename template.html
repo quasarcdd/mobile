@@ -13,13 +13,13 @@
   color-scheme:light;
   --bg:#f6f6f4; --card:#fff; --fg:#1b1b19; --muted:#71716b; --line:#e3e1da;
   --accent:#185fa5; --chip:#eceff4; --accent-fg:#fff; --code:#f2f2ef;
-  --err:#c0366b;
+  --err:#c0366b; --mark:#ffe9a8; --fs:15px;
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#15161a; --card:#1d1f24; --fg:#e9e9e6; --muted:#97978f; --line:#2b2e34;
   --accent:#7fb3e8; --chip:#24272d; --accent-fg:#0d1520; --code:#1a1c21;
-  --err:#ef9db4;
+  --err:#ef9db4; --mark:#5a4a1c;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
@@ -33,24 +33,21 @@ body{
 .detail{background:var(--bg);z-index:20}
 .bar{
   flex:0 0 auto;background:var(--card);border-bottom:1px solid var(--line);
-  padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px)*0);
-  padding-top:calc(8px + env(safe-area-inset-top,0px));
+  padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top,0px));
 }
 .srow{display:flex;gap:8px;align-items:center}
 #q{
   flex:1;min-width:0;font-size:16px;padding:9px 12px;border-radius:10px;
   border:1px solid var(--line);background:var(--bg);color:var(--fg);outline:none;
+  -webkit-appearance:none;appearance:none;
 }
 #q:focus{border-color:var(--accent)}
 .iconbtn{
   flex:0 0 auto;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--muted);font-size:18px;line-height:1;cursor:pointer;
-}
-/* 主题按钮里放的是一个汉字（自 / 浅 / 深），居中一下 */
-.iconbtn.tm{
-  font-size:15px;font-weight:500;color:var(--fg);
   display:flex;align-items:center;justify-content:center;
 }
+.iconbtn.tm{font-size:15px;font-weight:500;color:var(--fg)}
 .filters{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
 .f{
@@ -61,6 +58,14 @@ body{
 .stat{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:8px 14px 4px;font-size:12.5px;color:var(--muted)}
 #ver{flex:0 0 auto;font-size:11px;opacity:.85}
 .list{flex:1 1 auto;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.sect{
+  display:flex;align-items:center;gap:8px;padding:10px 14px 6px;
+  font-size:12px;color:var(--muted);letter-spacing:.04em;
+}
+.sect button{
+  margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--muted);
+  border-radius:999px;padding:2px 10px;font-size:11.5px;cursor:pointer;
+}
 .it{
   padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;
   display:flex;flex-direction:column;gap:2px;
@@ -68,6 +73,7 @@ body{
 .it:active{background:var(--chip)}
 .it b{font-weight:500;font-size:15px;overflow-wrap:anywhere}
 .it span{font-size:12px;color:var(--muted);overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,monospace}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
 .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px}
 .more{padding:14px;text-align:center;color:var(--muted);font-size:13px}
 .dtitle{display:flex;gap:8px;align-items:center}
@@ -77,19 +83,32 @@ body{
 }
 .dtitle .back.home{color:var(--muted)}
 .dtitle .back[disabled]{color:var(--muted);opacity:.45;cursor:default}
-.dtitle .nm{flex:1;min-width:0;font-weight:500;font-size:15px;overflow-wrap:anywhere}
+.dtitle .tt{flex:1;min-width:0}
+.dtitle .nm{font-weight:500;font-size:15px;overflow-wrap:anywhere}
 .dtitle .kd{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
-.tabs{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--card);border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
 .tab{
-  padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);
-  color:var(--fg);font-size:13.5px;cursor:pointer;
+  flex:0 0 auto;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);
+  color:var(--fg);font-size:13.5px;cursor:pointer;white-space:nowrap;
 }
 .tab.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tab.sp{margin-left:auto}
-.pane{flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:10px 12px calc(40px + env(safe-area-inset-bottom,0px))}
+.tool{display:flex;gap:6px;align-items:center;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--line)}
+.tool button{
+  border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;
+  padding:3px 9px;font-size:12.5px;cursor:pointer;white-space:nowrap;
+}
+.tool .sp{margin-left:auto}
+.tool .lab{font-size:12px;color:var(--muted)}
+.pane{
+  flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:10px 12px calc(40px + env(safe-area-inset-bottom,0px));
+  font-size:var(--fs);
+}
 .n{border-left:1px solid var(--line);padding-left:9px;margin:1px 0 1px 5px;min-width:0}
 .n > summary{
-  cursor:pointer;list-style:none;padding:3px 0;font-size:14px;
+  cursor:pointer;list-style:none;padding:3px 0;
   overflow-wrap:anywhere;word-break:break-word;
   display:flex;gap:6px;align-items:flex-start;
 }
@@ -98,27 +117,34 @@ body{
   content:"▸";flex:0 0 auto;color:var(--muted);font-size:11px;line-height:1.9;
 }
 .n[open] > summary::before{content:"▾"}
-.leaf{padding:3px 0 3px 15px;font-size:14px;overflow-wrap:anywhere;word-break:break-word}
-.top{padding:3px 0;font-size:14px;overflow-wrap:anywhere;word-break:break-word}
+.leaf{padding:3px 0 3px 15px;overflow-wrap:anywhere;word-break:break-word}
+.top{padding:3px 0;overflow-wrap:anywhere;word-break:break-word}
 .note{
-  font-size:12.5px;color:var(--muted);padding-left:15px;
+  font-size:.88em;color:var(--muted);padding-left:15px;
   overflow-wrap:anywhere;word-break:break-word;
 }
-.lkbox{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 2px}
-.lk{
-  display:inline-block;max-width:100%;padding:2px 9px;border-radius:999px;
-  background:var(--chip);border:1px solid var(--line);color:var(--accent);
-  font-size:12px;cursor:pointer;white-space:normal;word-break:break-all;
-  font-family:ui-monospace,Menlo,Consolas,monospace;
+/* 条件分支单独一行，弱化成旁注的样子，避免和正文抢注意力 */
+.cond{
+  font-size:.92em;color:var(--muted);padding-left:15px;margin:2px 0;
+  border-left:2px solid var(--line);overflow-wrap:anywhere;word-break:break-word;
 }
-/* 工具里没有对应条目的转跳：保留显示，但明确表示「跳不过去」。
-   这里不用 opacity —— 深色主题下 --muted 再压暗就看不清了 */
-.lk.miss{color:var(--muted);border-style:dashed}
+/* 正文里的交叉引用：可点的小标签，跳不过去的就纯文本 */
+.ref{
+  display:inline;padding:0 4px;border-radius:6px;
+  background:var(--chip);border:1px solid var(--line);color:var(--accent);
+  font-size:.92em;cursor:pointer;overflow-wrap:anywhere;
+}
 .rawh{font-weight:500;font-size:13px;color:var(--muted);margin:12px 0 4px}
 pre{
   margin:0;padding:10px;border-radius:10px;background:var(--code);border:1px solid var(--line);
   font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre;
 }
+body.wrap pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.props{display:flex;flex-direction:column;gap:0}
+.prow{display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);align-items:baseline}
+.prow .k{flex:0 0 4.5em;color:var(--muted);font-size:13px}
+.prow .v{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}
+.prow .v.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
 .boot{
   position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;gap:14px;
   align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font-size:14px;
@@ -132,16 +158,20 @@ pre{
 </style>
 <script>
 /* 在页面渲染前先把主题定下来，否则刷新时会先闪一下浅色。
-   只算 light / dark，「跟随系统」在这里就展开成具体值。 */
+   只算 light / dark，「跟随系统」在这里就展开成具体值。
+   字号、换行也一并恢复，免得内容先按默认字号渲染一遍再跳。 */
 (function(){
-  var dark = false;
+  var root = document.documentElement, dark = false;
   try {
     var m = localStorage.getItem("bena_theme");
     dark = m === "dark" ||
       ((m === "auto" || !m) && window.matchMedia &&
        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var fs = parseInt(localStorage.getItem("bena_font"), 10);
+    if (fs >= 13 && fs <= 20) root.style.setProperty("--fs", fs + "px");
+    if (localStorage.getItem("bena_wrap") === "1") document.documentElement.className = "wrap";
   } catch (e) {}
-  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  root.setAttribute("data-theme", dark ? "dark" : "light");
 })();
 </script>
 </head>
@@ -150,7 +180,7 @@ pre{
 <div class="app">
   <div class="bar">
     <div class="srow">
-      <input id="q" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="搜索干员 / Buff / 藏品 / ID">
+      <input id="q" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="搜索 Buff / 模板 / 藏品 / 棋子 / ID">
       <button class="iconbtn" id="clr" title="清空">×</button>
       <button class="iconbtn tm" id="theme" title="主题">自</button>
     </div>
@@ -164,9 +194,9 @@ pre{
 <div class="detail" id="detail" hidden>
   <div class="bar">
     <div class="dtitle">
-      <button class="back home" id="home">首页</button>
+      <button class="back home" id="home">列表</button>
       <button class="back" id="back">回退</button>
-      <div>
+      <div class="tt">
         <div class="nm" id="dname"></div>
         <div class="kd" id="dkey"></div>
       </div>
@@ -175,10 +205,20 @@ pre{
   <div class="tabs">
     <button class="tab on" id="tabT">译文</button>
     <button class="tab" id="tabR">原文</button>
-    <button class="tab sp" id="copy">复制</button>
+    <button class="tab" id="tabP">属性</button>
+    <button class="tab" id="copy">复制</button>
+  </div>
+  <div class="tool" id="tool">
+    <button id="expand">全展开</button>
+    <button id="collapse">全折叠</button>
+    <button id="wrap" class="sp">换行</button>
+    <span class="lab">字号</span>
+    <button id="fsdown">A−</button>
+    <button id="fsup">A+</button>
   </div>
   <div class="pane" id="paneT"></div>
   <div class="pane" id="paneR" hidden></div>
+  <div class="pane" id="paneP" hidden></div>
 </div>
 
 <div class="boot" id="boot"><div class="spin"></div><div id="bootmsg">正在准备数据…</div></div>
@@ -189,18 +229,16 @@ pre{
 (function(){
 "use strict";
 var META = __META__;
-var TYPE_LABEL = {buff:"常见Buff", buff_template:"Buff模板", global_buff:"全局Buff", rogue_item:"肉鸽物品"};
-/* 肉鸽主题子分类：[id, 显示名, 完整主题名]，id 与 export_data.py 的 ROGUE_SEASON_ID 对应 */
-var ROGUE_SEASONS = [
-  [1, "傀影肉鸽", "傀影与猩红孤钻"],
-  [2, "水月", "水月与深蓝之树"],
-  [3, "萨米", "探索者的银淞止境"],
-  [4, "萨卡兹", "萨卡兹的无终奇语"],
-  [5, "界园", "岁的界园志异"],
-  [6, "黑流树海", "沉沦者的黑流树海"]
-];
-var ROGUE_TYPE = -1;
+var TYPE_LABEL = {
+  buff:"常见Buff", buff_template:"Buff模板", global_buff:"全局Buff",
+  rogue_item:"肉鸽物品", autochess:"卫戍协议", recal_rune:"全息作战矩阵"
+};
+var SUBS = META.subs || {};
 var LIMIT = 200;
+var RECENT_LS = "bena_recent";
+var FONT_LS = "bena_font";
+var WRAP_LS = "bena_wrap";
+var RECENT_MAX = 20;
 
 var boot = document.getElementById("boot");
 var bootmsg = document.getElementById("bootmsg");
@@ -240,17 +278,65 @@ async function load(){
   MAP = Object.create(null);
   for (var i = 0; i < IDX.length; i++) {
     var e = IDX[i];
-    LOWER[i] = (e[2] + " " + e[1]).toLowerCase();
+    /* 后端给的搜索文本已经 lower 过，这里直接拼 key 的小写形式 */
+    LOWER[i] = e[3];
     MAP[META.types[e[0]] + ":" + e[1]] = i;
   }
   return true;
+}
+
+/* ---------- 最近浏览 ---------- */
+function getRecents(){
+  try {
+    var raw = localStorage.getItem(RECENT_LS);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+function saveRecents(list){
+  try { localStorage.setItem(RECENT_LS, JSON.stringify(list.slice(0, RECENT_MAX))); } catch (e) {}
+}
+
+/* 记一次浏览。同一个条目只留最新一条，避免来回点同一项把列表撑满。 */
+function addRecent(i){
+  var e = IDX[i];
+  var t = META.types[e[0]];
+  var list = getRecents().filter(function(r){ return !(r.t === t && r.k === e[1]); });
+  list.unshift({ t: t, k: e[1], n: e[2] });
+  saveRecents(list);
+}
+
+function recentIndex(r){
+  var i = MAP[r.t + ":" + r.k];
+  return i === undefined ? -1 : i;
+}
+
+function renderRecents(host){
+  var list = getRecents().filter(function(r){ return recentIndex(r) >= 0; });
+  if (!list.length) return;
+  var head = document.createElement("div");
+  head.className = "sect";
+  head.appendChild(document.createTextNode("最近浏览"));
+  var btn = document.createElement("button");
+  btn.textContent = "清空";
+  btn.onclick = function(ev){
+    ev.stopPropagation();
+    saveRecents([]);
+    doSearch();
+  };
+  head.appendChild(btn);
+  host.appendChild(head);
+  for (var j = 0; j < list.length; j++) {
+    host.appendChild(makeItem(recentIndex(list[j]), []));
+  }
 }
 
 /* ---------- 搜索 ---------- */
 var filter = -1, subFilter = 0, results = [], shown = 0, query = "";
 
 function doSearch(){
-  var kws = query.toLowerCase().split(/\s+/).filter(function(s){ return s.length > 0; });
+  var kws = query.toLowerCase().split(/\s+/).filter(function(x){ return x.length > 0; });
   results = [];
   for (var i = 0; i < IDX.length; i++) {
     if (filter >= 0 && IDX[i][0] !== filter) continue;
@@ -264,47 +350,221 @@ function doSearch(){
   renderList(true);
 }
 
+/* 把命中的关键词标出来。只在列表里做，详情页正文保持干净。 */
+function fillHighlighted(host, text, kws){
+  if (!kws || !kws.length) { host.textContent = text; return; }
+  var low = text.toLowerCase();
+  var spans = [];
+  for (var i = 0; i < kws.length; i++) {
+    var from = 0, at;
+    while ((at = low.indexOf(kws[i], from)) >= 0) {
+      spans.push([at, at + kws[i].length]);
+      from = at + kws[i].length;
+    }
+  }
+  if (!spans.length) { host.textContent = text; return; }
+  spans.sort(function(a, b){ return a[0] - b[0]; });
+  var merged = [spans[0]];
+  for (var s = 1; s < spans.length; s++) {
+    var last = merged[merged.length - 1];
+    if (spans[s][0] <= last[1]) last[1] = Math.max(last[1], spans[s][1]);
+    else merged.push(spans[s]);
+  }
+  var pos = 0;
+  for (var m = 0; m < merged.length; m++) {
+    if (merged[m][0] > pos) host.appendChild(document.createTextNode(text.slice(pos, merged[m][0])));
+    var mark = document.createElement("mark");
+    mark.textContent = text.slice(merged[m][0], merged[m][1]);
+    host.appendChild(mark);
+    pos = merged[m][1];
+  }
+  if (pos < text.length) host.appendChild(document.createTextNode(text.slice(pos)));
+}
+
+function makeItem(idx, kws){
+  var e = IDX[idx];
+  var div = document.createElement("div");
+  div.className = "it";
+  div.dataset.i = idx;
+  var b = document.createElement("b");
+  fillHighlighted(b, e[2], kws);
+  var s = document.createElement("span");
+  s.textContent = e[1];
+  div.appendChild(b);
+  div.appendChild(s);
+  return div;
+}
+
 function renderList(reset){
   var list = document.getElementById("list");
   if (reset) { list.innerHTML = ""; shown = 0; }
+  var kws = query.toLowerCase().split(/\s+/).filter(function(x){ return x.length > 0; });
+  var home = reset && !kws.length && filter < 0 && !subFilter;
   var frag = document.createDocumentFragment();
+  if (home) renderRecents(frag);
   var end = Math.min(results.length, shown + LIMIT);
-  for (var i = shown; i < end; i++) {
-    var idx = results[i];
-    var e = IDX[idx];
-    var div = document.createElement("div");
-    div.className = "it";
-    div.dataset.i = idx;
-    var b = document.createElement("b");
-    b.textContent = e[2];
-    var s = document.createElement("span");
-    s.textContent = e[1];
-    div.appendChild(b); div.appendChild(s);
-    frag.appendChild(div);
+  for (var i = shown; i < end; i++) frag.appendChild(makeItem(results[i], kws));
+  if (reset && !results.length) {
+    var empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = query ? "没有匹配的条目" : "这里还没有内容";
+    frag.appendChild(empty);
   }
   list.appendChild(frag);
   shown = end;
 
-  document.getElementById("stat").textContent =
-    results.length === 0 ? "没有匹配的条目"
-      : "匹配 " + results.length + " 条" + (results.length > shown ? "，已显示前 " + shown + " 条，请细化搜索" : "");
+  var stat = document.getElementById("stat");
+  if (results.length === 0) stat.textContent = "没有匹配的条目";
+  else if (results.length > shown) stat.textContent = "匹配 " + results.length + " 条，已显示前 " + shown + " 条";
+  else stat.textContent = "匹配 " + results.length + " 条";
 }
 
 document.getElementById("list").addEventListener("click", function(ev){
   var el = ev.target.closest(".it");
-  if (el) openEntry(parseInt(el.dataset.i, 10));
+  if (el) openEntry(parseInt(el.dataset.i, 10), true);
 });
 
 /* ---------- 详情 ---------- */
 var current = -1;
-/* 详情导航栈：记录打开过的条目序号与其译文滚动位置，供「回退」逐层返回 */
 var navStack = [];
+var readerTab = "t";
+
+function textParts(value){
+  /* 正文片段：字符串直接给；数组里 [文本, 行号] 生成可点标签，其余纯文本 */
+  var out = [];
+  if (typeof value === "string") {
+    if (value) out.push(document.createTextNode(value));
+    return out;
+  }
+  if (!Array.isArray(value)) return out;
+  for (var i = 0; i < value.length; i++) {
+    var part = value[i];
+    if (typeof part === "string") {
+      if (part) out.push(document.createTextNode(part));
+    } else if (Array.isArray(part)) {
+      var span = document.createElement("span");
+      if (typeof part[1] === "number" && part[1] >= 0) {
+        span.className = "ref";
+        span.textContent = part[0];
+        span.dataset.i = part[1];
+        span.onclick = function(ev){
+          ev.stopPropagation();
+          openEntry(parseInt(this.dataset.i, 10), true);
+        };
+      } else {
+        span.className = "refmiss";
+        span.textContent = part[0];
+      }
+      out.push(span);
+    }
+  }
+  return out;
+}
+
+function appendParts(host, value){
+  var parts = textParts(value);
+  for (var i = 0; i < parts.length; i++) host.appendChild(parts[i]);
+}
+
+/* 按上游 document_model.document_rows 的规则渲染：
+   - 有 children 或 description 就可折叠
+   - description 是缩进一层的旁注
+   - 条件分支只有在非 last_one 时才印：有 true 印「若 true …」，否则有 false 印「若 false，则直接跳出」
+   老版本把 true 拼进正文、完全丢掉 false，语义会被改写，这里按上游对齐。 */
+function renderNode(node, host){
+  if (!node || typeof node !== "object" || !("main" in node)) return;
+  if (node.main === null || node.main === undefined) return;
+
+  var hasKids = !!(node.children && node.children.length);
+  var foldable = hasKids || !!node.description;
+  var box;
+
+  if (foldable) {
+    var d = document.createElement("details");
+    d.className = "n";
+    d.open = !node.style_closed;
+    var sum = document.createElement("summary");
+    appendParts(sum, node.main);
+    d.appendChild(sum);
+    host.appendChild(d);
+    box = d;
+  } else {
+    var leaf = document.createElement("div");
+    leaf.className = "leaf";
+    appendParts(leaf, node.main);
+    host.appendChild(leaf);
+    box = host;
+  }
+
+  if (node.description) {
+    var nt = document.createElement("div");
+    nt.className = "note";
+    appendParts(nt, node.description);
+    box.appendChild(nt);
+  }
+
+  if (!node.last_one) {
+    if (node.true) {
+      var ct = document.createElement("div");
+      ct.className = "cond";
+      ct.appendChild(document.createTextNode("若 "));
+      appendParts(ct, node.true);
+      ct.appendChild(document.createTextNode(" …"));
+      box.appendChild(ct);
+    } else if (node.false) {
+      var cf = document.createElement("div");
+      cf.className = "cond";
+      cf.appendChild(document.createTextNode("若 "));
+      appendParts(cf, node.false);
+      cf.appendChild(document.createTextNode("，则直接跳出"));
+      box.appendChild(cf);
+    }
+  }
+
+  if (hasKids) {
+    for (var i = 0; i < node.children.length; i++) renderNode(node.children[i], box);
+  }
+}
+
+function plainParts(value){
+  if (typeof value === "string") return value;
+  if (!Array.isArray(value)) return "";
+  var s = "";
+  for (var i = 0; i < value.length; i++) {
+    var part = value[i];
+    s += typeof part === "string" ? part : (Array.isArray(part) ? part[0] : "");
+  }
+  return s;
+}
+
+/* 复制用：与屏幕上看到的层级与条件行保持一致 */
+function flatten(node){
+  var out = [];
+  (function walk(n, depth){
+    if (!n || typeof n !== "object" || !("main" in n)) return;
+    if (n.main === null || n.main === undefined) return;
+    var pad = new Array(depth + 1).join("    ");
+    out.push(pad + plainParts(n.main));
+    if (n.description) out.push(pad + "（" + plainParts(n.description) + "）");
+    if (!n.last_one) {
+      if (n.true) out.push(pad + "若 " + plainParts(n.true) + " …");
+      else if (n.false) out.push(pad + "若 " + plainParts(n.false) + "，则直接跳出");
+    }
+    if (n.children) for (var i = 0; i < n.children.length; i++) walk(n.children[i], depth + 1);
+  })(node, 0);
+  return out.join("\n");
+}
+
+function pretty(s){
+  try { return JSON.stringify(JSON.parse(s), null, 2); } catch(err) { return s; }
+}
 
 function renderEntry(i){
   current = i;
   var e = IDX[i];
   document.getElementById("dname").textContent = e[2];
-  document.getElementById("dkey").textContent = e[1];
+  var cat = e[5] || "";
+  document.getElementById("dkey").textContent = cat ? (e[1] + " · " + cat) : e[1];
 
   var paneT = document.getElementById("paneT");
   paneT.innerHTML = "";
@@ -325,26 +585,62 @@ function renderEntry(i){
     paneR.appendChild(pre);
   }
 
-  showTab("t");
+  var paneP = document.getElementById("paneP");
+  paneP.innerHTML = "";
+  var props = document.createElement("div");
+  props.className = "props";
+  var rows = [
+    ["名称", e[2], false],
+    ["ID", e[1], true],
+    ["类型", TYPE_LABEL[META.types[e[0]]] || META.types[e[0]], false],
+    ["分类", cat || "—", false],
+    ["子类", subLabel(e[0], e[4]), false],
+    ["数据", "随构建内联，可离线打开", false]
+  ];
+  for (var p = 0; p < rows.length; p++) {
+    var row = document.createElement("div");
+    row.className = "prow";
+    var kk = document.createElement("div");
+    kk.className = "k";
+    kk.textContent = rows[p][0];
+    var vv = document.createElement("div");
+    vv.className = "v" + (rows[p][2] ? " mono" : "");
+    vv.textContent = rows[p][1];
+    row.appendChild(kk);
+    row.appendChild(vv);
+    props.appendChild(row);
+  }
+  paneP.appendChild(props);
+
+  showTab(readerTab);
   document.getElementById("detail").hidden = false;
   paneT.scrollTop = 0;
 }
 
-/* 把当前条目的滚动位置存回它自己那一帧，避免离开时丢失阅读位置 */
+function subLabel(typeId, subId){
+  var list = SUBS[META.types[typeId]];
+  if (!list) return "—";
+  for (var i = 0; i < list.length; i++) if (list[i][0] === subId) return list[i][1];
+  return "—";
+}
+
 function saveScroll(){
   var f = navStack[navStack.length - 1];
   if (f) f.top = document.getElementById("paneT").scrollTop;
 }
 
-function openEntry(i){
+function openEntry(i, record){
   if (i < 0 || i >= IDX.length) return;
-  saveScroll();
+  if (record !== false) saveScroll();
   navStack.push({ i: i, top: 0 });
   renderEntry(i);
   syncNav();
+  if (record !== false) {
+    addRecent(i);
+    setHash(i);
+  }
 }
 
-/* 逐层回退到上一层条目；已在最外层时按钮为禁用态，要退出详情请用「首页」 */
 function backEntry(){
   if (navStack.length <= 1) return;
   saveScroll();
@@ -353,49 +649,151 @@ function backEntry(){
   renderEntry(prev.i);
   document.getElementById("paneT").scrollTop = prev.top;
   syncNav();
+  setHash(prev.i);
 }
 
-/* 回到首页（检索列表），列表的搜索词、筛选与滚动位置保持不变 */
 function gotoHome(){
   navStack = [];
   document.getElementById("detail").hidden = true;
   syncNav();
+  clearHash();
 }
 
 function syncNav(){
   document.getElementById("back").disabled = navStack.length <= 1;
 }
 
-function pretty(s){
-  try { return JSON.stringify(JSON.parse(s), null, 2); } catch(err) { return s; }
+/* ---------- 深链：地址栏记录当前条目，可分享、可刷新 ---------- */
+function setHash(i){
+  var e = IDX[i];
+  var h = "#" + encodeURIComponent(META.types[e[0]]) + ":" + encodeURIComponent(e[1]);
+  if (location.hash === h) return;
+  try { history.replaceState(null, "", h); } catch (err) { location.hash = h; }
 }
 
+function clearHash(){
+  if (!location.hash) return;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (err) {}
+}
+
+function parseHash(){
+  var h = location.hash.replace(/^#/, "");
+  if (!h) return -1;
+  var i = h.indexOf(":");
+  if (i < 0) return -1;
+  var t, k;
+  try {
+    t = decodeURIComponent(h.slice(0, i));
+    k = decodeURIComponent(h.slice(i + 1));
+  } catch (e) { return -1; }
+  var idx = MAP[t + ":" + k];
+  return idx === undefined ? -1 : idx;
+}
+
+/* 兼容上游桌面端的分享链接格式：?target=Buff.sluggish[inf]
+   上游用「类名.key」，类名首字母大写，我这里对应的类型名是小写，需要一张对照表。 */
+var TARGET_CLASS = {
+  Buff: "buff", BuffTemplate: "buff_template", GlobalBuff: "global_buff",
+  CardBuff: null,               /* 上游也没有对应条目，忽略 */
+  RogueItem: "rogue_item",
+  AutochessCharChess: "autochess", AutochessEffect: "autochess", AutochessBand: "autochess",
+  Crisis: "recal_rune"
+};
+
+function parseTargetParam(){
+  var m = /[?&]target=([^&]*)/.exec(location.search || "");
+  if (!m) return -1;
+  var raw;
+  try { raw = decodeURIComponent(m[1]); } catch (e) { return -1; }
+  var dot = raw.indexOf(".");
+  if (dot < 0) return -1;
+  var cls = raw.slice(0, dot), key = raw.slice(dot + 1);
+  var t = TARGET_CLASS.hasOwnProperty(cls) ? TARGET_CLASS[cls] : null;
+  if (!t) return -1;
+  /* 卫戍协议的三类（棋子/技能/策略）在上游是三个不同的类，我这边合并成一个类型，
+     所以只要类名能归到 autochess，就直接按类型+key 找。 */
+  var idx = MAP[t + ":" + key];
+  return idx === undefined ? -1 : idx;
+}
+
+/* 启动时的入口：地址栏给的 target 参数优先于 hash */
+function startTarget(){
+  var i = parseTargetParam();
+  return i >= 0 ? i : parseHash();
+}
+
+/* ---------- 详情页工具条 ---------- */
 function showTab(which){
-  var t = which === "t";
-  document.getElementById("paneT").hidden = !t;
-  document.getElementById("paneR").hidden = t;
-  document.getElementById("tabT").classList.toggle("on", t);
-  document.getElementById("tabR").classList.toggle("on", !t);
+  readerTab = which;
+  document.getElementById("paneT").hidden = which !== "t";
+  document.getElementById("paneR").hidden = which !== "r";
+  document.getElementById("paneP").hidden = which !== "p";
+  document.getElementById("tabT").classList.toggle("on", which === "t");
+  document.getElementById("tabR").classList.toggle("on", which === "r");
+  document.getElementById("tabP").classList.toggle("on", which === "p");
+  document.getElementById("tool").hidden = which === "p";
 }
 
 document.getElementById("tabT").addEventListener("click", function(){ showTab("t"); });
 document.getElementById("tabR").addEventListener("click", function(){ showTab("r"); });
+document.getElementById("tabP").addEventListener("click", function(){ showTab("p"); });
 document.getElementById("back").addEventListener("click", backEntry);
 document.getElementById("home").addEventListener("click", gotoHome);
+
+document.getElementById("expand").addEventListener("click", function(){
+  var all = document.getElementById("paneT").getElementsByTagName("details");
+  for (var i = 0; i < all.length; i++) all[i].open = true;
+});
+
+document.getElementById("collapse").addEventListener("click", function(){
+  var all = document.getElementById("paneT").getElementsByTagName("details");
+  for (var i = 0; i < all.length; i++) all[i].open = false;
+});
+
+/* 换行：只作用于「原文」，JSON 默认不换行，长行要横向滚 */
+function applyWrap(){
+  var on = false;
+  try { on = localStorage.getItem(WRAP_LS) === "1"; } catch (e) {}
+  document.documentElement.classList.toggle("wrap", on);
+  document.getElementById("wrap").textContent = on ? "换行开" : "换行";
+}
+
+document.getElementById("wrap").addEventListener("click", function(){
+  var on = false;
+  try { on = localStorage.getItem(WRAP_LS) === "1"; } catch (e) {}
+  try { localStorage.setItem(WRAP_LS, on ? "0" : "1"); } catch (e) {}
+  applyWrap();
+});
+applyWrap();
+
+/* 字号：13–20px，跟着 localStorage 走 */
+function fontSize(){
+  var v = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--fs"), 10);
+  return v >= 13 && v <= 20 ? v : 15;
+}
+
+function setFontSize(v){
+  v = Math.max(13, Math.min(20, v));
+  document.documentElement.style.setProperty("--fs", v + "px");
+  try { localStorage.setItem(FONT_LS, String(v)); } catch (e) {}
+}
+
+document.getElementById("fsdown").addEventListener("click", function(){ setFontSize(fontSize() - 1); });
+document.getElementById("fsup").addEventListener("click", function(){ setFontSize(fontSize() + 1); });
 
 document.getElementById("copy").addEventListener("click", function(){
   if (current < 0) return;
   var btn = this;
-  var raw = !document.getElementById("paneR").hidden;
-  var text = raw
-    ? (DATA[current][1] || []).map(pretty).join(",\n")
-    : flatten(DATA[current][0]);
+  var text;
+  if (readerTab === "r") text = (DATA[current][1] || []).map(pretty).join(",\n");
+  else if (readerTab === "p") text = IDX[current][2] + "\n" + IDX[current][1];
+  else text = flatten(DATA[current][0]);
   copyText(text, btn);
 });
 
 function copyText(text, btn){
+  var old = btn.textContent;
   var done = function(){
-    var old = btn.textContent;
     btn.textContent = "已复制";
     setTimeout(function(){ btn.textContent = old; }, 1200);
   };
@@ -416,145 +814,6 @@ function fallback(text, done){
   document.body.removeChild(ta);
 }
 
-/* ---------- 译文树 ---------- */
-function flatten(node){
-  var out = [];
-  (function walk(n, depth){
-    if (!n || typeof n !== "object") return;
-    if ("main" in n) {
-      if (n.main === null || n.main === undefined) return;
-      out.push(new Array(depth + 1).join("    ") + applyOverrides(n.main));
-      if (n.description) out.push(new Array(depth + 1).join("    ") + "（" + applyOverrides(n.description) + "）");
-      if (n.children && n.true) out.push(new Array(depth + 1).join("    ") + "..." + n.true + "：");
-      if (n.children) n.children.forEach(function(c){ walk(c, depth + 1); });
-    }
-  })(node, 0);
-  return out.join("\n");
-}
-
-/* 在目录里找转跳目标：先按 link 自带的类型找，找不到再跨类型找一遍。
-   找不到就是工具里确实没有这个条目。 */
-function findTarget(typeName, k){
-  if (typeName && MAP[typeName + ":" + k] !== undefined) return MAP[typeName + ":" + k];
-  for (var t = 0; t < META.types.length; t++) {
-    var j = MAP[META.types[t] + ":" + k];
-    if (j !== undefined) return j;
-  }
-  return undefined;
-}
-
-function makeLinks(link, host){
-  if (!link) return;
-  var box = document.createElement("div");
-  box.className = "lkbox";
-  var parts = String(link).split(",");
-  for (var i = 0; i < parts.length; i++) {
-    var l = parts[i].trim();
-    if (!l) continue;
-    var chip = document.createElement("span");
-    chip.className = "lk";
-    if (l.indexOf("prts.") === 0) {
-      chip.textContent = "PRTS · " + l.slice(5);
-      chip.onclick = function(name){
-        return function(ev){
-          ev.stopPropagation();
-          window.open("https://prts.wiki/w/" + encodeURIComponent(name), "_blank");
-        };
-      }(l.slice(5));
-    } else {
-      var key = l;
-      var typeName = "";
-      var kk = key;
-      if (key.indexOf(".") >= 0) {
-        var sp = key.split(".");
-        typeName = sp[0];
-        kk = sp.slice(1).join(".");
-      }
-      chip.textContent = "转跳 · " + key;
-      var target = findTarget(typeName, kk);
-      if (target === undefined) {
-        /* 工具里没有这个条目。以前点了会跳回首页、拿它当关键词再搜一遍，
-           而这类内部标识根本搜不到，最后只剩下一个空列表，
-           原本在读的条目也被顶掉了，只能重新找回来。所以这里只说明，不导航。 */
-        chip.classList.add("miss");
-        chip.onclick = function(k){
-          return function(ev){
-            ev.stopPropagation();
-            alert("工具里没有 " + k + " 这个条目，无法跳转。");
-          };
-        }(key);
-      } else {
-        chip.onclick = function(i){
-          return function(ev){
-            ev.stopPropagation();
-            openEntry(i);
-          };
-        }(target);
-      }
-    }
-    box.appendChild(chip);
-  }
-  if (box.childNodes.length) host.appendChild(box);
-}
-
-function renderNode(node, host){
-  if (!node || typeof node !== "object") return;
-  if (!("main" in node)) return;
-  if (node.main === null || node.main === undefined) return;
-
-  var text = applyOverrides(node.main);
-  var hasKids = Array.isArray(node.children);
-  if (!hasKids && node.true && node.true !== "") {
-    text = text === "" ? node.true + "：" : text + "，" + node.true + "：";
-  }
-
-  var line;
-  if (hasKids && node.children.length > 0) {
-    var d = document.createElement("details");
-    d.className = "n";
-    if (!node.style_closed) d.open = true;
-    var sum = document.createElement("summary");
-    sum.appendChild(document.createTextNode(text));
-    d.appendChild(sum);
-    host.appendChild(d);
-    if (node.description && node.description !== "") {
-      var nt = document.createElement("div");
-      nt.className = "note";
-      nt.textContent = "（" + applyOverrides(node.description) + "）";
-      d.appendChild(nt);
-    }
-    makeLinks(node.link, d);
-    if (node.true && node.true !== "") {
-      var tt = document.createElement("div");
-      tt.className = "leaf";
-      tt.textContent = "..." + node.true + "：";
-      d.appendChild(tt);
-    }
-    for (var i = 0; i < node.children.length; i++) renderNode(node.children[i], d);
-    return;
-  }
-
-  var leaf = document.createElement("div");
-  leaf.className = "leaf";
-  leaf.appendChild(document.createTextNode(text));
-  makeLinks(node.link, leaf);
-  host.appendChild(leaf);
-  if (node.description && node.description !== "") {
-    var n2 = document.createElement("div");
-    n2.className = "note";
-    n2.textContent = "（" + applyOverrides(node.description) + "）";
-    host.appendChild(n2);
-  }
-  if (hasKids) {
-    if (node.true && node.true !== "") {
-      var t2 = document.createElement("div");
-      t2.className = "leaf";
-      t2.textContent = "..." + node.true + "：";
-      host.appendChild(t2);
-    }
-  }
-}
-
 /* ---------- 顶部交互 ---------- */
 var q = document.getElementById("q");
 var timer = null;
@@ -567,8 +826,6 @@ document.getElementById("clr").addEventListener("click", function(){
 });
 
 /* ---------- 主题 ---------- */
-/* 三态循环：跟随系统 → 浅色 → 深色。存 localStorage，刷新后保持。
-   注意「跟随系统」本身不是一种配色，applyTheme 会把它展开成 light / dark 再写回 data-theme。 */
 var THEME_LS = "bena_theme";
 var THEMES = [
   { id: "auto",  mark: "自", tip: "跟随系统" },
@@ -604,7 +861,6 @@ themeBtn.addEventListener("click", function(){
   applyTheme();
 });
 
-/* 选「跟随系统」时，系统自己切到深色/浅色也要跟着变 */
 if (window.matchMedia) {
   var mqDark = window.matchMedia("(prefers-color-scheme: dark)");
   var onSysTheme = function(){ if (themeMode() === "auto") applyTheme(); };
@@ -613,36 +869,41 @@ if (window.matchMedia) {
 }
 applyTheme();
 
+/* ---------- 筛选条 ---------- */
 function countType(t){
   var n = 0;
   for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === t) n++;
   return n;
 }
 
-function countSub(s){
+function countSub(t, s){
   var n = 0;
-  for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === ROGUE_TYPE && IDX[i][4] === s) n++;
+  for (var i = 0; i < IDX.length; i++) if (IDX[i][0] === t && IDX[i][4] === s) n++;
   return n;
 }
 
-/* 肉鸽主题子分类，只在选中「肉鸽物品」时出现 */
 function buildSubFilters(){
   var box = document.getElementById("subfilters");
   box.innerHTML = "";
+  if (filter < 0) { box.hidden = true; return; }
+  var list = SUBS[META.types[filter]];
+  if (!list || !list.length) { box.hidden = true; return; }
+  box.hidden = false;
+
   var all = document.createElement("button");
   all.className = "f on";
-  all.textContent = "全部肉鸽 " + countType(ROGUE_TYPE);
+  all.textContent = "全部 " + countType(filter);
   all.onclick = function(){ setSubFilter(0, all); };
   box.appendChild(all);
-  for (var j = 0; j < ROGUE_SEASONS.length; j++) {
-    (function(season){
+
+  for (var j = 0; j < list.length; j++) {
+    (function(sid, label){
       var b = document.createElement("button");
       b.className = "f";
-      b.textContent = season[1] + " " + countSub(season[0]);
-      b.title = season[2];
-      b.onclick = function(){ setSubFilter(season[0], b); };
+      b.textContent = label + " " + countSub(filter, sid);
+      b.onclick = function(){ setSubFilter(sid, b); };
       box.appendChild(b);
-    })(ROGUE_SEASONS[j]);
+    })(list[j][0], list[j][1]);
   }
 }
 
@@ -656,11 +917,10 @@ function setSubFilter(s, btn){
 }
 
 function buildFilters(){
-  ROGUE_TYPE = META.types.indexOf("rogue_item");
   var box = document.getElementById("filters");
   var all = document.createElement("button");
   all.className = "f on";
-  all.textContent = "全部";
+  all.textContent = "全部 " + IDX.length;
   all.onclick = function(){ setFilter(-1, all); };
   box.appendChild(all);
   for (var t = 0; t < META.types.length; t++) {
@@ -681,9 +941,7 @@ function setFilter(t, btn){
   for (var i = 0; i < kids.length; i++) kids[i].classList.remove("on");
   btn.classList.add("on");
   subFilter = 0;
-  var sub = document.getElementById("subfilters");
-  if (t === ROGUE_TYPE) { buildSubFilters(); sub.hidden = false; }
-  else { sub.hidden = true; sub.innerHTML = ""; }
+  buildSubFilters();
   document.getElementById("list").scrollTop = 0;
   doSearch();
 }
@@ -696,13 +954,6 @@ document.getElementById("list").addEventListener("scroll", function(){
   }
 });
 
-/* ---------- AI 补译已暂时关闭 ----------
-   AI 功能（片段补译 / 问答 / 设置）因安全与使用效果考虑暂时下线，详见 README。
-   构建出的页面不再包含任何 AI 入口，也不会发起任何外部网络请求。
-   applyOverrides 保留为恒等函数，译文树渲染路径原样走，不感知 AI 是否存在；
-   之后要恢复功能：git revert 本次提交即可。 */
-function applyOverrides(s){ return s; }
-
 /* ---------- 启动 ---------- */
 (async function(){
   try {
@@ -713,9 +964,12 @@ function applyOverrides(s){ return s; }
     query = q.value.trim();
     doSearch();
     document.getElementById("ver").textContent =
-      "数据 " + String(META.builtAt || "").slice(0, 10) +
+      "数据 " + String(META.builtAt || "").slice(0, 10) + " · " + IDX.length + " 条" +
       (META.upstream && META.upstream.sha ? " · " + META.upstream.sha : "");
     boot.parentNode.removeChild(boot);
+
+    var start = startTarget();
+    if (start >= 0) openEntry(start, true);
   } catch (e) {
     die("数据加载失败：" + (e && e.message ? e.message : e) +
         "<br><br>请确认页面完整、未被截断，且浏览器允许执行内联脚本（微信内置浏览器可能限制，建议用系统浏览器打开）。");

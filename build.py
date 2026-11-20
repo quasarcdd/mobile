@@ -25,9 +25,9 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 import urllib.request
+import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,12 +39,18 @@ UPSTREAM_API = "https://api.github.com/repos/%s/commits/main" % UPSTREAM_REPO
 # 所以上游不能跟着 main 走：一旦上游仓库被入侵，恶意代码会顺着这条链一路到用户眼前。
 # 默认锁定到人工确认过的 commit。升级规则时：看过上游 diff → 改这里 → 提交。
 # 想临时跟随最新，用 --upstream-ref main。
-UPSTREAM_PIN = "9e5e879f3106e156f42c0b95942a4c7f07b250ee"
+#
+# 注意：上游从 9e5e879（2026-10-29）之后开始全部是**未签名**提交（GitHub 显示 unsigned），
+# 之前那条 PGP 签名链到此为止。锁 SHA 的意义因此更大：只有人工审过的版本才会被用。
+UPSTREAM_PIN = "32c915735442fc375f473329cad446d719ccedeb"
 
 
 def upstream_tarball(ref):
     return "https://codeload.github.com/%s/tar.gz/%s" % (UPSTREAM_REPO, ref)
 
+# 上游引擎按 app_paths.py 的相对路径读数据，全部平铺在 .src/tables 下。
+# 前 5 个是主干（缺了 Buff/模板/肉鸽都没法翻译），后 2 个只影响卫戍协议与全息作战矩阵，
+# 下载失败时只是少两张表，不该让整次构建失败。
 REQUIRED_TABLES = [
     "buff_table.json",
     "buff_template_data.json",
@@ -52,11 +58,40 @@ REQUIRED_TABLES = [
     "enemy_database.json",
     "roguelike_topic_table.json",
 ]
+OPTIONAL_TABLES = [
+    "activity_table.json",
+    "crisis_v2_table.json",
+]
+ALL_TABLES = REQUIRED_TABLES + OPTIONAL_TABLES
+
+# 游戏数据来源（与上游 downloader.FILES 的路径一一对应，都是相对游戏数据根的路径）
+GAMEDATA_URL = "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/refs/heads/master/zh_CN/gamedata/"
+GAMEDATA_FILES = {
+    "buff_table.json": "buff_table.json",
+    "buff_template_data.json": "battle/buff_template_data.json",
+    "character_table.json": "excel/character_table.json",
+    "enemy_database.json": "levels/enemydata/enemy_database.json",
+    "roguelike_topic_table.json": "excel/roguelike_topic_table.json",
+    "activity_table.json": "excel/activity_table.json",
+    "crisis_v2_table.json": "excel/crisis_v2_table.json",
+}
 
 UA = {"User-Agent": "BenaProtractor-Mobile-Build/1.0"}
 
 WORKDIR = HERE
 SRC = os.path.join(WORKDIR, ".src")
+
+# 判断 .src 里「有没有一份可用的上游源码」。
+# 上游 2026-11-10 那次结构重置把 anne.py 拆成了 anne/ 包，所以探针不能再盯 anne.py。
+SRC_MARKER = ("anne", "__init__.py")
+# 同步时唯一要保住的东西：游戏数据（.src/tables，几十 MB，重下很贵）。
+# 上游源码目录里的 translation/（词典）与 table_dummies/（伪表）都在 tarball 里，
+# 必须跟着版本一起换新，不能从旧 .src 里继承——否则读到的是上一版的结构。
+PRESERVE_ON_SYNC = ("tables",)
+
+
+def source_ready(src=None):
+    return os.path.exists(os.path.join(src or SRC, *SRC_MARKER))
 
 
 def log(msg):
@@ -95,6 +130,18 @@ def latest_sha():
     return data.get("sha"), (data.get("commit", {}).get("committer", {}) or {}).get("date", "")
 
 
+def mktmpdir(prefix):
+    """在工作区建临时目录。
+
+    不用 tempfile.mkdtemp：它在 Windows 上按 0o700 建目录，某些受限环境
+    （本机沙箱、部分 CI）之后无法再往里写东西。用 os.makedirs 拿默认权限即可。
+    """
+    path = os.path.join(WORKDIR, prefix + uuid.uuid4().hex[:8])
+    shutil.rmtree(path, ignore_errors=True)
+    os.makedirs(path)
+    return path
+
+
 def sync_upstream(ref):
     """把上游源码同步进 .src（保留 tables/）。返回 (sha, date, 是否变更)。
 
@@ -111,19 +158,19 @@ def sync_upstream(ref):
     pinned = ref != "main"
     if pinned:
         sha, date = ref, old.get("date", "")
-        if old.get("sha") == ref and os.path.exists(os.path.join(SRC, "anne.py")):
+        if old.get("sha") == ref and source_ready():
             log("上游已锁定 %s，本地源码一致" % ref[:7])
             return sha, date, False
     else:
         try:
             sha, date = latest_sha()
         except Exception as e:
-            if os.path.exists(os.path.join(SRC, "anne.py")):
+            if source_ready():
                 log("拉取上游版本信息失败（%s），沿用现有 .src" % e)
                 return old.get("sha", "unknown"), old.get("date", ""), False
             raise SystemExit("拉取上游版本信息失败，且 .src 里没有可用源码：%s" % e)
 
-        if sha and sha == old.get("sha") and os.path.exists(os.path.join(SRC, "anne.py")):
+        if sha and sha == old.get("sha") and source_ready():
             log("上游未更新（%s）" % sha[:7])
             return sha, date, False
 
@@ -131,14 +178,14 @@ def sync_upstream(ref):
     try:
         blob = http_get(upstream_tarball(ref), timeout=300)
     except Exception as e:
-        if os.path.exists(os.path.join(SRC, "anne.py")):
+        if source_ready():
             log("下载失败，沿用现有 .src 的源码（规则可能不是最新）")
             log("  原因：%s" % e)
             log("  若需最新规则，请配置代理后重试，或设置环境变量 HTTPS_PROXY")
             return old.get("sha", "unknown"), old.get("date", ""), False
         raise SystemExit("下载上游源码失败，且 .src 里没有可用源码：%s" % e)
 
-    tmp = tempfile.mkdtemp(prefix="bena-")
+    tmp = mktmpdir(".bena-unpack-")
     try:
         with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tf:
             try:
@@ -152,7 +199,7 @@ def sync_upstream(ref):
 
         os.makedirs(SRC, exist_ok=True)
         for name in os.listdir(SRC):
-            if name == "tables":
+            if name in PRESERVE_ON_SYNC:
                 continue
             path = os.path.join(SRC, name)
             if os.path.isdir(path):
@@ -178,7 +225,7 @@ def sync_upstream(ref):
 
 
 def _missing(directory):
-    return [n for n in REQUIRED_TABLES if not os.path.exists(os.path.join(directory, n))]
+    return [n for n in ALL_TABLES if not os.path.exists(os.path.join(directory, n))]
 
 
 def _copy_into(source, target):
@@ -198,13 +245,16 @@ def ensure_tables(update_data, tables_dir, fallback_dir):
     """准备游戏数据。
 
     注意：上游代码是按相对路径 './tables/xxx.json' 读的，所以数据必须落在 .src/tables，
-    不能另指一处目录。--tables 和兄弟目录 tables/ 只是「复制源」，用来省掉 72 MB 下载。
+    不能另指一处目录。--tables 和兄弟目录 tables/ 只是「复制源」，用来省掉上百 MB 下载。
+
+    主干 5 个文件缺一不可；activity_table / crisis_v2_table 只影响卫戍协议与全息作战矩阵，
+    缺了就在导出时跳过那两张表，不让整次构建失败。
     """
     cache = os.path.join(SRC, "tables")
     os.makedirs(cache, exist_ok=True)
 
     if update_data:
-        for n in REQUIRED_TABLES:
+        for n in ALL_TABLES:
             p = os.path.join(cache, n)
             if os.path.exists(p):
                 os.remove(p)
@@ -225,27 +275,53 @@ def ensure_tables(update_data, tables_dir, fallback_dir):
             return
 
     log("需要联网下载游戏数据（国内可能需要代理）…")
-    code = (
-        "import os,sys;"
-        "sys.path.insert(0,%r);"
-        "os.chdir(%r);"
-        "import downloader;"
-        "downloader.prepare_files()" % (SRC, SRC)
-    )
-    r = subprocess.run([sys.executable, "-c", code])
-    if r.returncode != 0:
-        raise SystemExit("游戏数据下载失败。可以手动把明日方舟数据表复制到 %s" % cache)
+    download_tables(cache)
 
     left = _missing(cache)
-    if left:
-        raise SystemExit("仍然缺少数据文件：%s" % ", ".join(left))
+    fatal = [n for n in left if n in REQUIRED_TABLES]
+    if fatal:
+        raise SystemExit("仍然缺少数据文件：%s" % ", ".join(fatal))
+    for n in left:
+        log("缺少可选数据 %s，相关数据表将在本次构建中跳过" % n)
     log("游戏数据已就绪")
 
 
-def run_export(seasons, src, out_json, out_gz):
+def download_tables(cache):
+    """自己下载缺失的数据文件。
+
+    不调上游的 downloader.prepare_files()：它用 tempfile.TemporaryDirectory 暂存，
+    而那个目录在 Windows 上是 0o700，受限环境（本机沙箱、部分 CI）里后续既写不进也删不掉，
+    整个下载会以 PermissionError 收场。这里直接「下载到 .part → 校验能解析 → 改名」，
+    失败就原地报错，不留半截文件。
+    """
+    for name in _missing(cache):
+        url = GAMEDATA_URL + GAMEDATA_FILES[name]
+        target = os.path.join(cache, name)
+        part = target + ".part"
+        log("  下载 %s ..." % name)
+        try:
+            blob = http_get(url, timeout=600)
+        except Exception as e:
+            raise SystemExit("下载 %s 失败：%s\n可以手动把明日方舟数据表放到 %s" % (name, e, cache))
+        with open(part, "wb") as f:
+            f.write(blob)
+        try:
+            json.loads(blob.decode("utf-8-sig"))
+        except Exception as e:
+            os.remove(part)
+            raise SystemExit("%s 下载到的内容不是有效 JSON：%s" % (name, e))
+        os.replace(part, target)
+        log("  %s %.1f MB" % (name, len(blob) / 1048576.0))
+
+
+def run_export(seasons, src, out_json, out_gz, out_meta, limit=0):
+    """跑一遍翻译引擎，返回 (日志行, 导出脚本给出的 meta)"""
     log("离线运行翻译引擎…")
     cmd = [sys.executable, os.path.join(HERE, "export_data.py"),
-           "--src", src, "--seasons", seasons, "-o", out_json, "--gz", out_gz]
+           "--src", src, "--seasons", seasons, "-o", out_json, "--gz", out_gz,
+           "--meta-out", out_meta]
+    if limit:
+        cmd += ["--limit", str(limit)]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         sys.stdout.write(r.stdout or "")
@@ -254,7 +330,13 @@ def run_export(seasons, src, out_json, out_gz):
     lines = (r.stdout or "").strip().splitlines()
     for line in lines:
         log("  " + line)
-    return lines
+
+    try:
+        with open(out_meta, encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception as e:
+        raise SystemExit("导出脚本没有产出可用的 meta：%s" % e)
+    return lines, meta
 
 
 def render(out_html, gz_path, meta):
@@ -297,6 +379,7 @@ def main():
     ap.add_argument("--no-update", action="store_true", help="不联网更新上游源码")
     ap.add_argument("--update-data", action="store_true", help="强制重新下载游戏数据")
     ap.add_argument("--keep-temp", action="store_true", help="保留中间的 data.json / data.json.gz")
+    ap.add_argument("--limit", type=int, default=0, help="每类只导出前 N 条（调试用）")
     args = ap.parse_args()
 
     WORKDIR = os.path.abspath(args.workdir)
@@ -307,10 +390,17 @@ def main():
     t0 = time.perf_counter()
 
     if args.no_update:
-        if not os.path.exists(os.path.join(SRC, "anne.py")):
+        if not source_ready():
             raise SystemExit(".src 里没有源码，去掉 --no-update 先同步一次上游")
-        sha, date = "local", ""
-        log("跳过联网更新，使用现有 .src")
+        # 页脚要显示实际用的上游版本，所以即使不联网也要读回上次同步记下的 SHA
+        stamp = os.path.join(SRC, ".upstream.json")
+        try:
+            with open(stamp, encoding="utf-8") as f:
+                saved = json.load(f)
+            sha, date = saved.get("sha", "local"), saved.get("date", "")
+        except Exception:
+            sha, date = "local", ""
+        log("跳过联网更新，使用现有 .src（%s）" % (sha[:7] if sha else "unknown"))
     else:
         sha, date, changed = sync_upstream(args.upstream_ref)
 
@@ -320,28 +410,24 @@ def main():
 
     data_json = os.path.join(HERE, "data.json")
     data_gz = os.path.join(HERE, "data.json.gz")
-    lines = run_export(args.seasons, SRC, data_json, data_gz)
+    data_meta = os.path.join(HERE, "data.meta.json")
+    lines, export_meta = run_export(args.seasons, SRC, data_json, data_gz, data_meta, args.limit)
 
-    count = 0
-    for line in lines:
-        if line.startswith("载入 "):
-            try:
-                count = int(line.split("导出 ")[1].split(" ")[0])
-            except Exception:
-                pass
+    count = export_meta.get("count", 0)
 
     meta = {
         "builtAt": time.strftime("%Y-%m-%d %H:%M:%S"),
         "upstream": {"repo": UPSTREAM_REPO, "sha": (sha or "")[:7], "date": date},
-        "seasons": [int(s) for s in args.seasons.split(",") if s.strip()],
-        "types": ["buff", "buff_template", "global_buff", "rogue_item"],
+        "seasons": export_meta.get("seasons", []),
+        "types": export_meta.get("types", []),
+        "subs": export_meta.get("subs", {}),
         "count": count,
     }
 
     size = render(output, data_gz, meta)
 
     if not args.keep_temp:
-        for p in (data_json, data_gz):
+        for p in (data_json, data_gz, data_meta):
             if os.path.exists(p):
                 os.remove(p)
 
